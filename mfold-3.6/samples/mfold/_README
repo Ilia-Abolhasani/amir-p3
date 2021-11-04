@@ -1,0 +1,11 @@
+Sample folding of the midi-variant RNA minus strand.
+
+Input: mdv1.seq in FASTA format.
+
+Default RNA folding. Command is:
+
+mfold SEQ=mdv1.seq
+
+Only 'mfold.sav' has been removed.
+
+

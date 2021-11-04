@@ -1,0 +1,39 @@
+M. Zuker, March 2013.
+
+                       INSTALLATION of mfold 3.5
+
+mfold version 3.5 uses a configure script.
+
+Some non-interactive mfold_util programs, in particular, sir_graph and
+boxplot_ng, are included so that structure and dot plots can be
+created. It is preferable to have the mfold_util-4.6 versions of these
+programs.  
+
+With this version, no environment variables are required. Energy and
+related files will be read from the installation data directory,
+usually /usr/local/share/mfold (or $prefix/share/mfold, where $prefix
+is specified by using --prefix= when running ./configure).
+
+After running ./configure (or the more convenient ./Configure.bash
+script), 
+
+make
+
+compiles the Fortran, C and C++ programs and creates the mfold and
+mfold_quik scripts.
+
+make install
+
+places the binaries and scripts into $prefix/bin and data files into
+$prefix/share/mfold. These directories are created if they do not
+already exist.
+
+As in earlier versions, the current working directory will be searched
+first for energy files when the folding program is run.
+
+Please report bugs, other problems or suggestions to zukerm@rpi.edu
+Look at the files in the "doc" directory, especially the manual, which
+is in PostScript, pdf and HTML form.
+
+          __________________________________________________
+

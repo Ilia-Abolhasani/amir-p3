@@ -1,0 +1,146 @@
+This is the errata file for version 3.2
+
+1. 8/26/05
+
+The new version of filter-sort for mfold 3.2 had an swk script
+error. SIZE is now defined properly using "-v SIZE=$SIZE". Sorting is
+performed correctly and tmp2-$1 is not needed.
+
+Old versus new:
+6a7
+> # 8/26/05 - Redone using awk in July 05 and now corrected.
+25,26c26,28
+< head -1 $1 > tmp1-$1
+< tail +2 $1|tr -s "\011 " "\011\011"|awk '{if($2 >= $SIZE) print $0 }' > tmp2-$1
+---
+> head -1 $1|tr -s "\011 " "\011\011" > tmp1-$1
+> tail +2 $1|tr -s "\011 " "\011\011"|\
+>     awk -v SIZE=$SIZE '{if($1 == 1 || $2 >= SIZE) print $0}'|sort -n +4 >> tmp1-$1
+28,30d29
+< # Now sort and replace
+< 
+< sort -r +4 tmp2-$1  >> tmp1-$1
+32d30
+< rm -f tmp2-$1
+34a33
+> 
+
+2. 9/11/05
+
+The old way of building a heap for automatic traceback worked along
+rows. The column would jump by cntrl(9) (window parameter) when an
+acceptable base pair was found. Otherwise, the next column would be
+used. This was always a rather poor "ad hoc" method. It is also
+possible that the minimum energy folding could be missed. For this
+reason, traceback initiation base pairs are chosen along
+"anti-diagonals" i+j = constant = diag. The first base pair (either on
+first row (i=1) or last column (j=n) is always accepted if ene is <=
+crit. If (i,j) is accepted, the next base pair to be accepted along an
+anti-diagonal, (i',j'), has the property that ene(i',j') <= crit and
+ene(i',j') != ene(i,j). In terms of the .plot file, it means that the
+outermost base pair is chosen for each helix that is within the energy
+increment. 
+
+New is >
+Old is <
+59,78c59,72
+<       do diag = 3,2*n-1
+<          if (diag.le.n+1) then
+<             i = 1
+<             j = diag - i
+<          else
+<             i = diag - n
+<             j = diag - i
+<          endif
+<          oldene = infinity
+<          do while (j.gt.i)
+<             if (ene(i,j).le.crit.and.ene(i,j).ne.oldene) then
+<                if (num.eq.sortmax) then
+<                   err = 31
+<                   call errmsg(err,hstnum(i),hstnum(j))
+<                   goto 10
+<                endif
+<                num =  num + 1
+<                oldene = ene(i,j)
+<                heapi(num) = i
+<                heapj(num) = j
+---
+>       i = 1
+>       j = 2
+>       do while (i.lt.n)
+>          if (ene(i,j).le.crit) then
+>             if (num.eq.sortmax) then
+>                err = 31
+>                call errmsg(err,hstnum(i),hstnum(j))
+>                goto 10
+>             endif
+>             num =  num + 1
+>             heapi(num) = i
+>             heapj(num) = j
+>             j = j + cntrl(9) + 1
+>             if (j.gt.n) then
+80,81c74,78
+<                j = j - 1
+<             else
+---
+>                j = i + 1
+>             endif
+>          else
+>             j = j +1
+>             if (j.gt.n) then
+83c80
+<                j = j - 1
+---
+>                j = i + 1
+85c82
+<          enddo
+---
+>          endif
+
+3. 10/17/05
+
+In add add-dHdSTm2.f and add-dHdSTm.f, dg is now rounded to two
+decimal places and dg, dg and ds are written as f9.2, instead of as
+f8.1. This is done to give better accuracy in computing ds and Tm.
+In efn (efn.f) and nafold (misc.f), dg is written to two decimal
+places as well.
+
+4. 12/7/05
+
+Error in creating local copy of sequence. No linefeed at the end of the
+sequence file. mfold code (formid) is too stupid to read last line
+without final line feed. Last line of reformatted sequence is missing.
+Correction is to add a line feed at the end of the file.
+
+In reformat-seq.sh, line feed is added in two locations.
+106d105
+<     echo '' >> ${FILE_PREFIX}-local.seq
+124d122
+< echo '' >> ${FILE_PREFIX}-local.seq
+
+5. 9/12/06
+
+Not really an error, but it has caused problems. In the mfold-3.2
+directory (and subdirectories), protections have been accidentally set
+to make files unreadable to "all" or even to "group". Similarly for
+directory permission. All directories are now 755 (rwxr-xr-x) and
+ordinary files are 644 (rw-r--r--).
+
+
+6. 10/3/06
+
+ct2bp won't read old ct file format. This is a temporary fix.
+
+36c36
+<                read(ctrec(7:80),*,err=998) seq(i),jm1,jp1,j,k
+---
+>                read(ctrec(8:80),*,err=998) seq(i),jm1,jp1,j,k
+
+7. 11/13/06
+
+split_ct.awk updated to split any ct file; not just those with "="
+in the header records. The lengths of sequences may differ. The first
+entry in the first record ($1 in awk) is the length of the first
+sequence. In general, the first entry on each header record is the
+length of the sequence whose structure follows.
+

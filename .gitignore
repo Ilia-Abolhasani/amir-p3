@@ -4,7 +4,5 @@ Temp/
 Data/
 CT/
 RNA_secondary_structure/
-cdhit/
-mfold-3.6/
 *.fasta
 *.fna
