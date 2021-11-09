@@ -3,6 +3,6 @@
 Temp/
 Data/
 CT/
-RNA_secondary_structure/
+secondary_structure/
 *.fasta
 *.fna
