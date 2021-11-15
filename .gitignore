@@ -1,7 +1,6 @@
-
 .ipynb_checkpoints
 Temp/
-Data/
+miRBase_driven_data/
 CT/
 secondary_structure/
 *.fasta
