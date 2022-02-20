@@ -8,3 +8,5 @@ secondary_structure/
 *.fna
 Trash/
 Result/
+DIAMOND/
+_Temp/
