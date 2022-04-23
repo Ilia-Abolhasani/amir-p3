@@ -1029,7 +1029,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         if(energy_calc_method == "UNAFold"):
             precursor_dg = get_dg_by_unafold(_n, _i, _v)
             result['precursor delta G'] = precursor_dg
-        if(precursor_dg != None or True):
+        if(precursor_dg != None):
             result['precursor MFEI'] = get_MFEI(precursor_dg, precursor_gc, _n)
         else:
             result['precursor MFEI'] = ""            
