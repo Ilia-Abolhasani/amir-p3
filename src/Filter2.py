@@ -24,8 +24,8 @@ TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS = 3
 MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION = 2
 MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION = 3
 MINIMUM_REQUIRED_CLEAR_REGION = 8
-ACCEPTABLE_NUM_FOR_MISMATCHED_LOCATIONS_IN_HIT_REGION = 5
 ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS = 3
+ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION = 5
 
 MIN_NUM_OF_LINKING_RESIDUES = 0
 MAX_NUM_OF_LINKING_RESIDUES = 1000
@@ -150,7 +150,7 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     level2 = level2[level2['hit GC content'] <= MAX_HIT_GC_CONTENT_PERCENTAGE]
 
     level2 = level2[level2.apply(lambda row: is_allowed(row, "bulge type", "bulge size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
-    level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
+    level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION), axis=1)]
     level2 = level2[level2.apply(lambda row: is_allowed_clear(row), axis=1)]
     level2 = level2[level2.apply(lambda row: check_border_line(row, "mismatch type", "mismatch size", BORDER_LINE_MISMATCH_MAX), axis=1)]
     level2 = level2[level2.apply(lambda row: check_border_line(row, "bulge type", "bulge size", BORDER_LINE_BULGE_MAX), axis=1)]
@@ -167,11 +167,11 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     sum_internal_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop total size', 'internal start', 'internal end'), axis=1)
     sum_of_residue = level2.apply(lambda row: number_of_residue(row), axis=1)
 
-    _sum = sum_bulge + sum_internal + sum_missmatch_border_distal * 2 + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
+    _sum = sum_bulge + sum_internal + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
     level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS]
 
-    _sum = (_sum + sum_missmatch * 2 + sum_missmatch_border_proximal * 2)[level2.index]
-    level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_MISMATCHED_LOCATIONS_IN_HIT_REGION]
+    _sum = (_sum + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal) * 2)[level2.index]
+    level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION]
 
     _sum = (sum_missmatch + sum_bulge + sum_internal)[level2.index]
     level2 = level2[_sum <= TOTAL_NUM_OF_NONMATCHING_POSITIONS]
