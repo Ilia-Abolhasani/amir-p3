@@ -771,7 +771,7 @@ def get_gc_content(seq):
     for i in ['c','g', 's']:
         if i not in freq:
             freq[i] = 0    
-    return round((freq['c'] + freq['g'] + freq['s']) / len(seq),2)
+    return round((freq['c'] + freq['g'] + freq['s']) / len(seq),2) * 100
 
 
 def get_boi_dist(boi_start, boi_end, hit_start, hit_end, mir_type, counter):    
@@ -784,7 +784,7 @@ def get_psep_dist(psep, mir_type, hit_start, hit_end, counter):
     if(mir_type == '5p'):
         return abs(psep - hit_end) - counter
     if(mir_type == '3p'):
-        return  abs((hit_start + 1) - psep)  - counter
+        return abs((hit_start + 1) - psep)  - counter
 
 
 def get_junction_distance(data, dist, thresh_bulge, thresh_loop):
@@ -857,9 +857,12 @@ def get_precursor_seq(hit_start, hit_end,istar_min, istar_max, star_start_real, 
         return [hit_start+1, star_end_real,[i+1 for i in range(istar_max, star_end_real)]]
 
 
+def get_AMFE(dg, nuc):
+    return abs((dg / len(nuc)) * 100)
+
+
 def get_MFEI(dg, gc, nuc):
-    out = ((dg / len(nuc)) * 100) / ( gc * 100) 
-    return abs(out)
+    return abs(((dg / len(nuc)) * 100) / (gc))
 
 
 def get_dg_by_vienna(dotbracket):
@@ -905,16 +908,16 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     result['pdf'] = f'=HYPERLINK("{server_url + path[1:-3] + ".pdf"}","pdf")'     
     [chromosome, start, end, hit_start, hit_end, sign] = get_tag_info(tag)    
     result['hit start'] = hit_start + 1
-    result['hit end'] =  hit_end
+    result['hit end'] = hit_end
     result['sign'] = sign
     result['chromosome'] = chromosome 
-    result['hit position on chromosome'] = f'{start + hit_start-1} {start + hit_end}' 
+    result['hit position on chromosome'] = f'{start + hit_start-1}-{start + hit_end}'
     dg = get_deltaG(ct)
     result['delta G'] = dg
     [nucleotide, index, values] = get_ct_data(ct)
     result['full seq'] = ''.join(nucleotide)    
     hit_seq = ''.join(nucleotide[hit_start:hit_end])
-    result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
+    #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
     result['hit seq'] = hit_seq
     hit_range = index[hit_start:hit_end]
     hit_len = len(hit_range)
@@ -996,12 +999,12 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         return pd.Series(result)    
     boi_seq = ''.join(nucleotide[boi_start-1: boi_end].tolist())
     result['boi start'] = boi_start
-    result['boi end'] =  boi_end
-    result['boi seq'] =  boi_seq    
-    result['boi name'] =  f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
+    result['boi end'] = boi_end
+    result['boi seq'] = boi_seq
+    result['boi name'] = f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
     boi_gc = get_gc_content(boi_seq)
     result['boi GC content'] =  boi_gc
-    result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, boi_start,  boi_end, star_start_real, star_end_real)
+    #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, boi_start,  boi_end, star_start_real, star_end_real)
     terminal_structure_range = get_terminal_structure_range(hit_start, hit_end, istar_min, istar_max, mir_type)
     [_n, _i, _v] = get_trim_data(nucleotide, index, values, boi_start, boi_end)
     boi_dotbracket = get_ct2dot_bracket(_n, _i, _v)    
@@ -1013,6 +1016,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         if(energy_calc_method =="UNAFold"):
             boi_dg = get_dg_by_unafold(_n, _i, _v)
             result['boi delta G'] = boi_dg
+        result['boi AMFE'] = get_AMFE(boi_dg, boi_seq)
         result['boi MFEI'] = get_MFEI(boi_dg, boi_gc, boi_seq)
         result['boi visualization'] = visualization(_n, _i, _v, hit_start - (boi_start - 1), hit_end - (boi_start - 1), 1,  boi_end - (boi_start - 1), star_start_real- (boi_start - 1), star_end_real- (boi_start - 1))
     [s, e, zero] = get_precursor_seq(hit_start, hit_end,istar_min, istar_max, star_start_real, star_end_real, mir_type)    
@@ -1030,8 +1034,10 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             precursor_dg = get_dg_by_unafold(_n, _i, _v)
             result['precursor delta G'] = precursor_dg
         if(precursor_dg != None):
+            result['precursor AMFE'] = get_AMFE(precursor_dg, _n)
             result['precursor MFEI'] = get_MFEI(precursor_dg, precursor_gc, _n)
         else:
+            result['precursor AMFE'] = ""
             result['precursor MFEI'] = ""            
     precursor_array = [hit_start+1,hit_end, star_start_real, star_end_real]
     precursor_start = min(precursor_array)
@@ -1082,7 +1088,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
                 result[f'branch#{i + 1} apical loop end'] = ""
                 result[f'branch#{i + 1} apical loop size'] = ""
                 result[f'branch#{i + 1} stem last residue'] = ""
-                result[f'branch#{i + 1} stem length']  = ""           
+                result[f'branch#{i + 1} stem length'] = ""
         
         
         primary_stem_end_point = get_primary_stem_end_point(branch_start_point, branch_end_point, stem_last_residue, hit_start, hit_end, istar_min, istar_max, values, number_of_terminal_structure, mir_type)                
