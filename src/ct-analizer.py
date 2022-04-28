@@ -1,154 +1,16 @@
 import json
 import math
 import os, sys
+import pyperclip
 import numpy as np
 import pandas as pd
 from subprocess import Popen, PIPE, STDOUT
-if sys.version_info[0] < 3: 
-    from StringIO import StringIO
-else:
-    from io import StringIO
 
 with open('./src/Title.json') as json_file:
     Title = json.load(json_file)
 
 with open('./src/Error.json') as json_file:
     Msg = json.load(json_file)
-
-
-def bracket_row(row):    
-    s = row['data']
-    index = min(s.find('.'), s.find('('))
-    data = row['data']
-    row['data'] = data[0:index]
-    row['bracket'] = data[index:]
-    return row
-
-
-def adjust(text, n=7):
-    text = str(text)    
-    return " " * (n - len(text)) + text
-
-
-def bracket_to_ct(tag, data, bracket, deltaG, negative_deltaG=True):    
-    deltaG = deltaG.replace('(','').replace(')','')
-    deltaG = float(deltaG)
-    if(deltaG > 0 and negative_deltaG ): # negetive?!
-        deltaG = -1 * deltaG
-    stack = []
-    index = np.zeros((len(bracket)), dtype = int)
-    values = np.zeros((len(bracket)), dtype = int)
-    for i in range(len(bracket)):
-        index[i] = i + 1
-        if(bracket[i] == '.'):
-            values[i] = 0
-        elif(bracket[i] == '('):
-            stack.append(i)
-        elif(bracket[i] == ')'):
-            if(len(stack) == 0 ):
-                print('structure error!')
-            values[stack[-1]] = i + 1
-            values[i]  = stack[-1] + 1
-            stack.pop()
-        else:
-            print('structure error!')
-    if(len(stack) != 0 ):
-        print('structure error!')
-    # body    
-    ct = f"{adjust(len(data),6)} dG ={adjust(deltaG,10)} {tag}\n"   
-    for i in range(len(bracket)):
-        ct += f"{adjust(index[i],6)} {data[i]} {adjust(i,6)} {adjust((i+2)%(len(data)+1),6)} {adjust(values[i],6)} {adjust(index[i],7)}\n"
-    return ct
-
-
-def fasta_to_df(path):
-    with open(path, 'r') as file:
-        text = file.read()
-    lines = [line for line in text.split('\n') if len(line) > 0]
-    s = ''
-    tags = []
-    data = []
-    for l in lines:
-        if(l[0]=='>'):
-            tags.append(l)        
-            data.append(s)
-            s = ''
-        else:
-            s += l    
-    data.append(s)
-    df = pd.DataFrame(
-            {
-                'tag': tags,
-                'data': data[1:]
-            })
-    df['tag'] = df['tag'].apply(lambda x: x[1:])    
-    return df
-
-
-def df_to_fasta(df, path):
-    lines = []
-    df.apply(lambda row: lines.append(f">{row['tag']}\n{row['data']}\n"),axis=1)
-    with open(path,'w') as file:
-        file.write(''.join(lines))
-
-
-def reformat(path):
-    return path.replace('(','_').replace(')','_').replace('.','').replace(':','_')
-
-
-def reformatCT(path):
-    with open(path, 'r') as file:
-        text = file.read()
-    text = [l for l in text.split('\n') if len(l) > 0 ] # remove blank lines
-    text = '\n'.join(text)
-    text = text.replace("\t"," ")
-    while("  " in text):
-        text = text.replace("  ", " ")
-    lines = [l for l in text.split('\n')]
-    for i in range(len(lines)):
-        if(lines[i][0] == " "):
-            lines[i] = lines[i][1:]
-        if(lines[i][-1] == " "):
-            lines[i] = lines[i][:-1]
-    text = '\n'.join(lines)
-    return text
-
-
-def get_ct_data(ct):
-    ct = "\n".join(ct.split('\n')[1:])
-    df = pd.read_csv(StringIO(ct), sep=" ", header=None)               
-    nucleotide = df.iloc[:,1]
-    index = df.iloc[:,5]
-    values = df.iloc[:,4]
-    return [nucleotide, index, values]
-
-
-def ct2dot_bracket(path):
-    [nucleotide, index, values] = get_ct_data(reformatCT(path))
-    text = ''.join(nucleotide) + "\n"
-    watch = []
-    for i, v in zip(index,values):
-        if(v == 0):
-            text += '.'
-        else:
-            if( v not in watch):
-                text += '('
-                watch.append(i)
-            if( v in watch):
-                text += ')'
-    return text
-
-
-def is_nested(index, values):
-    max_value = max(index) + 10 # inf
-    for i, v in zip(index, values):
-        if(v < max_value and v != 0):
-            max_value  = v
-        if(i >= max_value):
-            max_value = max(index) + 10 # inf
-        if(v > max_value):
-            return False               
-    return True
 
 
 def get_tag_info(tag):    
@@ -771,7 +633,7 @@ def get_gc_content(seq):
     for i in ['c','g', 's']:
         if i not in freq:
             freq[i] = 0    
-    return round((freq['c'] + freq['g'] + freq['s']) / len(seq),2)
+    return round((freq['c'] + freq['g'] + freq['s']) / len(seq),2) * 100
 
 
 def get_boi_dist(boi_start, boi_end, hit_start, hit_end, mir_type, counter):    
@@ -784,7 +646,7 @@ def get_psep_dist(psep, mir_type, hit_start, hit_end, counter):
     if(mir_type == '5p'):
         return abs(psep - hit_end) - counter
     if(mir_type == '3p'):
-        return  abs((hit_start + 1) - psep)  - counter
+        return abs((hit_start + 1) - psep)  - counter
 
 
 def get_junction_distance(data, dist, thresh_bulge, thresh_loop):
@@ -857,9 +719,12 @@ def get_precursor_seq(hit_start, hit_end,istar_min, istar_max, star_start_real, 
         return [hit_start+1, star_end_real,[i+1 for i in range(istar_max, star_end_real)]]
 
 
+def get_AMFE(dg, nuc):
+    return abs((dg / len(nuc)) * 100)
+
+
 def get_MFEI(dg, gc, nuc):
-    out = ((dg / len(nuc)) * 100) / ( gc * 100) 
-    return abs(out)
+    return abs(((dg / len(nuc)) * 100) / (gc))
 
 
 def get_dg_by_vienna(dotbracket):
@@ -905,16 +770,16 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     result['pdf'] = f'=HYPERLINK("{server_url + path[1:-3] + ".pdf"}","pdf")'     
     [chromosome, start, end, hit_start, hit_end, sign] = get_tag_info(tag)    
     result['hit start'] = hit_start + 1
-    result['hit end'] =  hit_end
+    result['hit end'] = hit_end
     result['sign'] = sign
     result['chromosome'] = chromosome 
-    result['hit position on chromosome'] = f'{start + hit_start-1} {start + hit_end}' 
+    result['hit position on chromosome'] = f'{start + hit_start-1}-{start + hit_end}'
     dg = get_deltaG(ct)
     result['delta G'] = dg
     [nucleotide, index, values] = get_ct_data(ct)
     result['full seq'] = ''.join(nucleotide)    
     hit_seq = ''.join(nucleotide[hit_start:hit_end])
-    result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
+    #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
     result['hit seq'] = hit_seq
     hit_range = index[hit_start:hit_end]
     hit_len = len(hit_range)
@@ -996,12 +861,12 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         return pd.Series(result)    
     boi_seq = ''.join(nucleotide[boi_start-1: boi_end].tolist())
     result['boi start'] = boi_start
-    result['boi end'] =  boi_end
-    result['boi seq'] =  boi_seq    
-    result['boi name'] =  f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
+    result['boi end'] = boi_end
+    result['boi seq'] = boi_seq
+    result['boi name'] = f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
     boi_gc = get_gc_content(boi_seq)
     result['boi GC content'] =  boi_gc
-    result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, boi_start,  boi_end, star_start_real, star_end_real)
+    #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, boi_start,  boi_end, star_start_real, star_end_real)
     terminal_structure_range = get_terminal_structure_range(hit_start, hit_end, istar_min, istar_max, mir_type)
     [_n, _i, _v] = get_trim_data(nucleotide, index, values, boi_start, boi_end)
     boi_dotbracket = get_ct2dot_bracket(_n, _i, _v)    
@@ -1013,6 +878,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         if(energy_calc_method =="UNAFold"):
             boi_dg = get_dg_by_unafold(_n, _i, _v)
             result['boi delta G'] = boi_dg
+        result['boi AMFE'] = get_AMFE(boi_dg, boi_seq)
         result['boi MFEI'] = get_MFEI(boi_dg, boi_gc, boi_seq)
         result['boi visualization'] = visualization(_n, _i, _v, hit_start - (boi_start - 1), hit_end - (boi_start - 1), 1,  boi_end - (boi_start - 1), star_start_real- (boi_start - 1), star_end_real- (boi_start - 1))
     [s, e, zero] = get_precursor_seq(hit_start, hit_end,istar_min, istar_max, star_start_real, star_end_real, mir_type)    
@@ -1030,8 +896,10 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             precursor_dg = get_dg_by_unafold(_n, _i, _v)
             result['precursor delta G'] = precursor_dg
         if(precursor_dg != None):
+            result['precursor AMFE'] = get_AMFE(precursor_dg, _n)
             result['precursor MFEI'] = get_MFEI(precursor_dg, precursor_gc, _n)
         else:
+            result['precursor AMFE'] = ""
             result['precursor MFEI'] = ""            
     precursor_array = [hit_start+1,hit_end, star_start_real, star_end_real]
     precursor_start = min(precursor_array)
@@ -1082,7 +950,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
                 result[f'branch#{i + 1} apical loop end'] = ""
                 result[f'branch#{i + 1} apical loop size'] = ""
                 result[f'branch#{i + 1} stem last residue'] = ""
-                result[f'branch#{i + 1} stem length']  = ""           
+                result[f'branch#{i + 1} stem length'] = ""
         
         
         primary_stem_end_point = get_primary_stem_end_point(branch_start_point, branch_end_point, stem_last_residue, hit_start, hit_end, istar_min, istar_max, values, number_of_terminal_structure, mir_type)                
