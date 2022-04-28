@@ -1,16 +1,23 @@
 import json
 import math
 import os, sys
-import pyperclip
 import numpy as np
 import pandas as pd
 from subprocess import Popen, PIPE, STDOUT
 
+
+class dotdict(dict):    
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 with open('./src/Title.json') as json_file:
-    Title = json.load(json_file)
+    titles = dotdict(json.load(json_file))
+
 
 with open('./src/Error.json') as json_file:
-    Msg = json.load(json_file)
+    errors = dotdict(json.load(json_file))
 
 
 def get_tag_info(tag):    
@@ -87,7 +94,8 @@ def get_mir_type(hit_start, hit_end, istar_min, istar_max, continuous_pairing, c
         return "no complementarity in hit region"  
     print(hit_start, hit_end, istar_min, istar_max, continuous_pairing, complementarity_in_hit_region, hit_self_complementarity)
 
-def get_star_start(hit_start, hit_end, values):        
+
+def get_star_start(hit_start, hit_end, values):
     a = 0
     i = hit_end - 1
     while(values[i] == 0 and i >= hit_start):
@@ -759,50 +767,49 @@ def get_row(tag, path, extra, acceptable_terminal_structures = 5, MCMA=2, effect
 effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAFold"):        
     result = {}    
     ct = reformatCT(path)
-    result['seq name'] = tag
+    result[titles.seq_name] = tag
     try:
         fold_number = path[-20:].split('SEQ_')[1].split('.ct')[0]            
     except:
         fold_number = "0"
-    result['ct name'] = "Fold " + fold_number.zfill(2)
-    #print(result['ct name'] )
-    result['ct'] = f'=HYPERLINK("{server_url + path[1:]}","ct")'
-    result['pdf'] = f'=HYPERLINK("{server_url + path[1:-3] + ".pdf"}","pdf")'     
+    result[titles.ct_name] = "Fold " + fold_number.zfill(2)    
+    result[titles.ct] = f'=HYPERLINK("{server_url + path[1:]}","ct")'
+    result[titles.pdf] = f'=HYPERLINK("{server_url + path[1:-3] + ".pdf"}","pdf")'     
     [chromosome, start, end, hit_start, hit_end, sign] = get_tag_info(tag)    
-    result['hit start'] = hit_start + 1
-    result['hit end'] = hit_end
-    result['sign'] = sign
-    result['chromosome'] = chromosome 
-    result['hit position on chromosome'] = f'{start + hit_start-1}-{start + hit_end}'
+    result[titles.hit_start] = hit_start + 1
+    result[titles.hit_end] = hit_end
+    result[titles.sign] = sign
+    result[titles.chromosome] = chromosome 
+    result[titles.hit_position] = f'{start + hit_start-1}-{start + hit_end}'
     dg = get_deltaG(ct)
-    result['delta G'] = dg
+    result[titles.dg] = dg
     [nucleotide, index, values] = get_ct_data(ct)
-    result['full seq'] = ''.join(nucleotide)    
+    result[titles.full_seq] = ''.join(nucleotide)    
     hit_seq = ''.join(nucleotide[hit_start:hit_end])
-    #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
-    result['hit seq'] = hit_seq
+    #result[titles.full_seq_vis] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
+    result[titles.hit_seq] = hit_seq
     hit_range = index[hit_start:hit_end]
     hit_len = len(hit_range)
-    result['hit len'] = hit_len
+    result[titles.hit_len] = hit_len
     flanking_gc_content = get_gc_content(nucleotide)
-    result['flanking GC content'] = flanking_gc_content
-    result['flanking MFEI'] = get_MFEI(dg, flanking_gc_content, nucleotide)
-    result['hit GC content'] =  get_gc_content(hit_seq)
+    result[titles.flanking_gc] = flanking_gc_content
+    result[titles.flanking_mfei] = get_MFEI(dg, flanking_gc_content, nucleotide)
+    result[titles.hit_gc_content] =  get_gc_content(hit_seq)
     inc_srange = values[hit_start:hit_end] # Incomplete_Star_range    
     [complementarity_in_hit_region, complementarity_in_hit_region_percentage] = get_complementarity_in_hit_region(inc_srange, hit_len)    
-    result['complementarity in hit region'] = complementarity_in_hit_region 
-    result['hit complementarity percentage']  = complementarity_in_hit_region_percentage
+    result[titles.cmplt_hit_region] = complementarity_in_hit_region 
+    result[titles.hit_cmplt_pct]  = complementarity_in_hit_region_percentage
     if(complementarity_in_hit_region == "no"):        
-        result['message'] = "no complementarity in hit region"        
+        result[titles.msg] = "no complementarity in hit region"        
         return pd.Series(result) 
     
     hit_self_complementarity = get_hit_self_complementarity(hit_start, hit_end, inc_srange)    
-    result['hit self complementarity'] = hit_self_complementarity       
+    result[titles.hit_self_cmplt] = hit_self_complementarity
     if(hit_self_complementarity == "yes"):        
-        result['message'] = "hit self complementarity"
+        result[titles.msg] = "hit self complementarity"
         return pd.Series(result)     
     if(hit_start - extra < 0 or (len(values) - hit_end) < extra):        
-        result['message'] = "Not enough flanking for hit region"                
+        result[titles.msg] = "Not enough flanking for hit region"                
         return pd.Series(result) 
     
     [flanking_istar_min, flanking_istar_max] = get_istar_min_max(values[(hit_start-extra):(hit_end+extra)], hit_self_complementarity)  
@@ -810,29 +817,29 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     #result['flanking istar max']  = flanking_istar_max    
     
     continuous_pairing = get_continuous_pairing(hit_start, hit_end, flanking_istar_min, flanking_istar_max, hit_self_complementarity)
-    result['continuous pairing'] = continuous_pairing    
+    result[titles.cont_pairing] = continuous_pairing    
     if(continuous_pairing == "no"):
-        result['message'] = "discontinuous star strand"
+        result[titles.msg] = "discontinuous star strand"
         return pd.Series(result) 
     
     [istar_min, istar_max] = get_istar_min_max(inc_srange, hit_self_complementarity)  
-    result['istar min']  = istar_min
-    result['istar max']  = istar_max
+    result[titles.istar_min]  = istar_min
+    result[titles.istar_max]  = istar_max
     
     mir_type = get_mir_type(hit_start, hit_end, istar_min, istar_max, continuous_pairing, complementarity_in_hit_region, hit_self_complementarity)
-    result['mir type'] = mir_type    
+    result[titles.mir_type] = mir_type    
     if(mir_type not in ['3p', '5p']):        
-        result['message'] = mir_type
+        result[titles.msg] = mir_type
         return pd.Series(result) 
     try: 
         [star_start, star_start_msg] = get_star_start(hit_start, hit_end, values)
         [star_end, star_end_msg] = get_star_end(hit_start, hit_end, values)
-        result['star start'] = star_start 
-        result['star start msg'] = star_start_msg     
-        result['star end'] = star_end    
-        result['star end msg'] =  star_end_msg
+        result[titles.star_start] = star_start 
+        result[titles.star_start_msg] = star_start_msg     
+        result[titles.star_end] = star_end    
+        result[titles.star_end_msg] =  star_end_msg
     except:
-        result['message'] = 'Error in calculation of star start and end'        
+        result[titles.msg] = 'Error in calculation of star start and end'        
         return pd.Series(result) 
     
     star_start_real = star_start
@@ -843,86 +850,86 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     set1 = set(range(star_start-2 , star_end+1)) ######################
     set2 = set(range(hit_start, hit_end))            
     if(len(set1.intersection(set2)) > 0):        
-        result['message'] = 'overlap between miRNA and miRNA*'        
+        result[titles.msg] = 'overlap between miRNA and miRNA*'        
         return pd.Series(result) 
     
     star_range = index[star_start - 1:star_end]
     star_seq = ''.join(nucleotide[star_start - 1:star_end])
-    result['star seq'] = star_seq
+    result[titles.star_seq] = star_seq
     num_of_linking_residues = get_num_of_linking_residues(hit_start, hit_end, star_start_real, star_end_real, mir_type)
-    result['num of linking residues'] = num_of_linking_residues
+    result[titles.num_of_lnk_res] = num_of_linking_residues
     #print(result)
     star_branching = get_star_branching(star_start, star_end, star_range, values)
     #star_branching = get_star_branching(istar_min, istar_max, inc_srange, values)
-    result['star branching'] = "yes" if star_branching else "no"    
+    result[titles.star_branching] = "yes" if star_branching else "no"    
     [boi_start, boi_end] = get_boi(hit_start, hit_end, values, mir_type)                
     if(math.isnan(boi_start) or math.isnan(boi_end)):        
         result['message'] = 'unfit BOI structure'
         return pd.Series(result)    
     boi_seq = ''.join(nucleotide[boi_start-1: boi_end].tolist())
-    result['boi start'] = boi_start
-    result['boi end'] = boi_end
-    result['boi seq'] = boi_seq
-    result['boi name'] = f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
+    result[titles.boi_start] = boi_start
+    result[titles.boi_end] = boi_end
+    result[titles.boi_seq] = boi_seq
+    result[titles.boi_name] = f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
     boi_gc = get_gc_content(boi_seq)
-    result['boi GC content'] =  boi_gc
+    result[titles.boi_gc] =  boi_gc
     #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, boi_start,  boi_end, star_start_real, star_end_real)
     terminal_structure_range = get_terminal_structure_range(hit_start, hit_end, istar_min, istar_max, mir_type)
     [_n, _i, _v] = get_trim_data(nucleotide, index, values, boi_start, boi_end)
     boi_dotbracket = get_ct2dot_bracket(_n, _i, _v)    
-    result['boi dotbracket'] = boi_dotbracket.split("%5Cn")[1]
+    result[titles.boi_dotbracket] = boi_dotbracket.split("%5Cn")[1]
     if(energy_calc_method == "Vienna" or energy_calc_method =="UNAFold"):
         if(energy_calc_method == "Vienna"):
             boi_dg = get_dg_by_vienna(boi_dotbracket)
-            result['boi delta G'] = boi_dg
+            result[titles.boi_dg] = boi_dg
         if(energy_calc_method =="UNAFold"):
             boi_dg = get_dg_by_unafold(_n, _i, _v)
-            result['boi delta G'] = boi_dg
-        result['boi AMFE'] = get_AMFE(boi_dg, boi_seq)
-        result['boi MFEI'] = get_MFEI(boi_dg, boi_gc, boi_seq)
-        result['boi visualization'] = visualization(_n, _i, _v, hit_start - (boi_start - 1), hit_end - (boi_start - 1), 1,  boi_end - (boi_start - 1), star_start_real- (boi_start - 1), star_end_real- (boi_start - 1))
+            result[titles.boi_dg] = boi_dg
+        result[titles.boi_AMFE] = get_AMFE(boi_dg, boi_seq)
+        result[titles.boi_MFEI] = get_MFEI(boi_dg, boi_gc, boi_seq)
+        result[titles.boi_vis] = visualization(_n, _i, _v, hit_start - (boi_start - 1), hit_end - (boi_start - 1), 1,  boi_end - (boi_start - 1), star_start_real- (boi_start - 1), star_end_real- (boi_start - 1))
     [s, e, zero] = get_precursor_seq(hit_start, hit_end,istar_min, istar_max, star_start_real, star_end_real, mir_type)    
     [_n, _i, _v] = get_trim_data(nucleotide, index, values, s, e)      
     _v[_v > (e - s + 1)] = 0    
     precursor_dotbracket = get_ct2dot_bracket(_n, _i, _v)    
     precursor_gc = get_gc_content("".join(_n))
-    result['precursor gc content'] = precursor_gc
-    result['precursor dotbracket'] = precursor_dotbracket.split("%5Cn")[1]
+    result[titles.pre_gc] = precursor_gc
+    result[titles.pre_dotbracket] = precursor_dotbracket.split("%5Cn")[1]
     if(energy_calc_method == "Vienna" or energy_calc_method =="UNAFold"):        
         if(energy_calc_method == "Vienna"):
             precursor_dg = get_dg_by_vienna(precursor_dotbracket)
-            result['precursor delta G'] = precursor_dg
+            result[titles.pre_dg] = precursor_dg
         if(energy_calc_method == "UNAFold"):
             precursor_dg = get_dg_by_unafold(_n, _i, _v)
-            result['precursor delta G'] = precursor_dg
+            result[titles.pre_dg] = precursor_dg
         if(precursor_dg != None):
-            result['precursor AMFE'] = get_AMFE(precursor_dg, _n)
-            result['precursor MFEI'] = get_MFEI(precursor_dg, precursor_gc, _n)
+            result[titles.pre_amfe] = get_AMFE(precursor_dg, _n)
+            result[titles.pre_mfei] = get_MFEI(precursor_dg, precursor_gc, _n)
         else:
-            result['precursor AMFE'] = ""
-            result['precursor MFEI'] = ""            
+            result[titles.pre_amfe] = ""
+            result[titles.pre_mfei] = ""            
     precursor_array = [hit_start+1,hit_end, star_start_real, star_end_real]
     precursor_start = min(precursor_array)
     precursor_end = max(precursor_array)
-    result['precursor name'] =  f'{chromosome}|{sign}|{start + precursor_start}-{start + precursor_end}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
-    result['precursor seq'] = ''.join(_n)
-    result['precursor seq visualization'] = visualization(_n, _i, _v, hit_start - (s - 1), hit_end - (s - 1), 1,  e - (s - 1), star_start_real- (s - 1), star_end_real- (s - 1))
-    result['terminal structure range'] = [i+1 for i in [terminal_structure_range[0], terminal_structure_range[-1]]]                            
+    result[titles.pre_name] =  f'{chromosome}|{sign}|{start + precursor_start}-{start + precursor_end}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
+    result[titles.pre_seq] = ''.join(_n)
+    result[titles.pre_seq_vis] = visualization(_n, _i, _v, hit_start - (s - 1), hit_end - (s - 1), 1,  e - (s - 1), star_start_real- (s - 1), star_end_real- (s - 1))
+    result[titles.term_struc_range] = [i+1 for i in [terminal_structure_range[0], terminal_structure_range[-1]]]                            
     if(len(terminal_structure_range) == 0):        
-        result['number of terminal structures'] = "no residues between miR and miR*"         
+        result[titles.n_term_struc] = "no residues between miR and miR*"         
     else:                
         number_of_terminal_structure = get_number_of_terminal_structure(values, terminal_structure_range)        
         if(number_of_terminal_structure == 0):
-            result['number of terminal structures'] = 1                    
+            result[titles.n_term_struc] = 0                    
             #[branch_start_point, branch_end_point] = [[terminal_structure_range[0]+1], [terminal_structure_range[-1]+1]]
             [branch_start_point, branch_end_point] = [[], []]   
             stem_last_residue = []
         elif(number_of_terminal_structure == 1):
-            result['number of terminal structures'] = 1        
+            result[titles.n_term_struc] = 1        
             [branch_start_point, branch_end_point] = [[terminal_structure_range[0]+1], [terminal_structure_range[-1]+1]]            
             stem_last_residue = []
         else:
-            result['number of terminal structures'] = number_of_terminal_structure
+            result[titles.n_term_struc] = number_of_terminal_structure
             [branch_start_point, branch_end_point]  = get_branch_star_end_point(values, terminal_structure_range)         
         if(number_of_terminal_structure != 0):
             #[branch_apical_loop_start, branch_apical_loop_end, branch_apical_loop_size] = [[branch_start_point[0]], [branch_end_point[0]], [abs(branch_end_point[0] - branch_start_point[0]) + 1]]                    
@@ -931,92 +938,94 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             branch_stem_length = get_branch_stem_length(branch_start_point, branch_apical_loop_start)                        
         for i in range(acceptable_terminal_structures):
             if(i < len(branch_start_point)):
-                result[f'branch#{i + 1} start point'] = branch_start_point[i]
-                result[f'branch#{i + 1} end point'] = branch_end_point[i]
-                result[f'branch#{i + 1} total length'] = abs(branch_end_point[i] - branch_start_point[i]) + 1                                                
-                result[f'branch#{i + 1} apical loop start'] = branch_apical_loop_start[i]
-                result[f'branch#{i + 1} apical loop end'] = branch_apical_loop_end[i]
-                result[f'branch#{i + 1} apical loop size'] = branch_apical_loop_size[i]                    
+                result[titles.brch_start.format(index = i + 1)] = branch_start_point[i]
+                result[titles.brch_end.format(index = i + 1)] = branch_end_point[i]
+                result[titles.brch_total_length.format(index = i + 1)] = abs(branch_end_point[i] - branch_start_point[i]) + 1
+                result[titles.brch_apical_start.format(index = i + 1)] = branch_apical_loop_start[i]
+                result[titles.brch_apical_end.format(index = i + 1)] = branch_apical_loop_end[i]
+                result[titles.brch_apical_size.format(index = i + 1)] = branch_apical_loop_size[i]                    
                 if(number_of_terminal_structure == 1):
-                    result[f'branch#{i + 1} stem last residue'] = stem_last_residue[i]
+                    result[titles.brch_stm_res.format(index = i + 1)] = stem_last_residue[i]
                 else:
-                    result[f'branch#{i + 1} stem last residue'] = ""
-                result[f'branch#{i + 1} stem length'] = branch_stem_length[i]                
+                    result[titles.brch_stm_res.format(index = i + 1)] = ""
+                result[titles.brch_stm_length.format(index = i + 1)] = branch_stem_length[i]                
             else:
-                result[f'branch#{i + 1} start point'] = ""
-                result[f'branch#{i + 1} end point'] = ""            
-                result[f'branch#{i + 1} total length'] = ""
-                result[f'branch#{i + 1} apical loop start'] = ""
-                result[f'branch#{i + 1} apical loop end'] = ""
-                result[f'branch#{i + 1} apical loop size'] = ""
-                result[f'branch#{i + 1} stem last residue'] = ""
-                result[f'branch#{i + 1} stem length'] = ""
+                result[titles.brch_start.format(index = i + 1)] = ""
+                result[titles.brch_end.format(index = i + 1)] = ""            
+                result[titles.brch_total_length.format(index = i + 1)] = ""
+                result[titles.brch_apical_start.format(index = i + 1)] = ""
+                result[titles.brch_apical_end.format(index = i + 1)] = ""
+                result[titles.brch_apical_size.format(index = i + 1)] = ""
+                result[titles.brch_stm_res.format(index = i + 1)] = ""
+                result[titles.brch_stm_length.format(index = i + 1)] = ""
         
         
         primary_stem_end_point = get_primary_stem_end_point(branch_start_point, branch_end_point, stem_last_residue, hit_start, hit_end, istar_min, istar_max, values, number_of_terminal_structure, mir_type)                
         if(not np.isnan(primary_stem_end_point)):
             primary_stem_end_point_star = values[primary_stem_end_point-1]
-            result['psep'] = primary_stem_end_point
-            result['psep*'] = primary_stem_end_point_star
+            result[titles.psep] = primary_stem_end_point
+            result[titles.psep_star] = primary_stem_end_point_star
             if(number_of_terminal_structure == 0):
-                result[f'branch#{1} apical loop start'] = primary_stem_end_point
-                result[f'branch#{1} apical loop end'] = primary_stem_end_point_star
-                result[f'branch#{1} apical loop size'] = primary_stem_end_point_star - primary_stem_end_point - 1 
-                result[f'branch#{1} stem length']  = 0       
+                result[titles.brch_apical_start.format(index=1)] = min(primary_stem_end_point, primary_stem_end_point_star)
+                result[titles.brch_apical_end.format(index=1)] = max(primary_stem_end_point, primary_stem_end_point_star)
+                result[titles.brch_apical_size.format(index=1)] = abs(primary_stem_end_point - primary_stem_end_point_star) - 1 
+                result[titles.brch_stm_length.format(index=1)]  = 0       
             primary_stem_length = get_primary_stem_length(primary_stem_end_point, branch_start_point, branch_end_point, stem_last_residue, hit_start, hit_end, values, number_of_terminal_structure, mir_type)
-            result['primary stem length'] = primary_stem_length                            
+            result[titles.primary_length] = primary_stem_length                            
             
             domain = get_domain(primary_stem_end_point, boi_start, boi_end, stem_last_residue, hit_start, hit_end, mir_type)
-            result['domain'] = [domain[0]+1, domain[-1]+1]
+            result[titles.domain] = [domain[0]+1, domain[-1]+1]
             domain_star = get_domain_star(primary_stem_end_point_star, boi_start, boi_end, stem_last_residue, hit_start, hit_end, mir_type)
-            result['domain*'] = [domain_star[0] + 1, domain_star[-1] + 1]
+            result[titles.domain_star] = [domain_star[0] + 1, domain_star[-1] + 1]
             interfering_structures_domain = get_interfering_structures(domain, values)
-            result['domain interfering structures'] = "yes" if interfering_structures_domain else "no"
+            result[titles.domain_inter_struc] = "yes" if interfering_structures_domain else "no"
             
             interfering_structures_domain_star = get_interfering_structures(domain_star, values)
-            result['domain* interfering structures'] = "yes" if interfering_structures_domain_star else "no"
+            result[titles.domain_star_inter_struc] = "yes" if interfering_structures_domain_star else "no"
                         
             [mismatch, mismatch_size, mis_loc_type, mis_start, mis_end] = get_mismatch(domain, values,MCMA, hit_start, hit_end, mir_type)            
-            result['mismatch'] = mismatch
-            result['mismatch size'] = mismatch_size
-            result['mismatch type'] = mis_loc_type
-            result['mismatch start'] = mis_start
-            result['mismatch end'] = mis_end
+            result[titles.mismatch] = mismatch
+            result[titles.mismatch_size] = mismatch_size
+            result[titles.mismatch_type] = mis_loc_type
+            result[titles.mismatch_start] = mis_start
+            result[titles.mismatch_end] = mis_end
             [bulge, bulge_size, bulge_loc_type, bulge_start, bulge_end,bulge_type] = get_bulge(domain, values, hit_start, hit_end, mir_type)
-            result['bulge'] = bulge
-            result['bulge size'] = bulge_size
-            result['bulge type'] = bulge_loc_type
-            result['bulge start'] = bulge_start
-            result['bulge end'] = bulge_end
+            result[titles.bulge] = bulge
+            result[titles.bulge_size] = bulge_size
+            result[titles.bulge_type] = bulge_loc_type
+            result[titles.bulge_start] = bulge_start
+            result[titles.bulge_end] = bulge_end
             [internal_loop, size_HSBL, size_SSBL, intr_loc_type, intr_start, intr_end] = get_internal_loop(domain, values, MCMA, hit_start, hit_end, mir_type)
-            result['internal loop'] = internal_loop
-            result['internal loop HSBL'] = size_HSBL
-            result['internal loop SSBL'] = size_SSBL
+            result[titles.inter] = internal_loop
+            result[titles.inter_HSBL] = size_HSBL
+            result[titles.inter_SSBL] = size_SSBL
             if(size_SSBL != None):
-                result['internal loop total size'] = [size_SSBL[i] + size_HSBL[i] for i in range(len(size_SSBL))]
+                result[titles.inter_size] = [size_SSBL[i] + size_HSBL[i] for i in range(len(size_SSBL))]
             else:
-                result['internal loop total size'] = '-'
-            result['internal type'] = intr_loc_type
-            result['internal start'] = intr_start
-            result['internal end'] = intr_end
+                result[titles.inter_size] = '-'
+            result[titles.inter_type] = intr_loc_type
+            result[titles.inter_start] = intr_start
+            result[titles.inter_end] = intr_end
             [proximal, proximal_hr, proximal_counter] = get_distance_info("loop proximal","proximal border line", mis_loc_type,mismatch_size, mis_start, bulge_size, bulge_loc_type, bulge_start,bulge_end, bulge_type,internal_loop,size_HSBL,size_SSBL,intr_loc_type,intr_start,intr_end,mir_type)
-            result['proximal distance'] = proximal_hr
+            result[titles.prx_dist] = proximal_hr
             [distal, distal_hr, distal_counter] = get_distance_info("loop distal","distal border line", mis_loc_type,mismatch_size, mis_start, bulge_size, bulge_loc_type, bulge_start,bulge_end, bulge_type,internal_loop,size_HSBL,size_SSBL,intr_loc_type,intr_start,intr_end, mir_type)
-            result['distal distance'] = distal_hr
+            result[titles.distal_dist] = distal_hr
             boi_dist = get_boi_dist(boi_start, boi_end, hit_start, hit_end, mir_type, distal_counter)
-            result['base structure corrected length'] = boi_dist
+            result[titles.base_struct_cor_len] = boi_dist
             psep_dist = get_psep_dist(primary_stem_end_point, mir_type, hit_start, hit_end, proximal_counter)
-            result['primary stem corrected length'] = psep_dist  
-            result['proximal closest to 15'] = closestto(proximal,15) 
-            result['proximal closest to 21'] = closestto(proximal,21) 
-            result['proximal closest to 36'] = closestto(proximal,36)
-            result['distal closest to 15'] = closestto(distal,15)
-            result['distal closest to 21'] = closestto(distal,21)
-            result['distal closest to 36'] = closestto(distal,36)
-            result['Loop distal junction distance'] = get_junction_distance(distal, boi_dist, effective_bulge_size_in_Hit_vicinity_regions, effective_internal_loop_size_in_Hit_vicinity_regions)            
-            result['Loop proximal junction distance'] = get_junction_distance(proximal, psep_dist, effective_bulge_size_in_Hit_vicinity_regions, effective_internal_loop_size_in_Hit_vicinity_regions)            
+            result[titles.prim_stem_cor_len] = psep_dist  
+            result[titles.prx_closest.format(index = 15)] = closestto(proximal, 15) 
+            result[titles.prx_closest.format(index = 17)] = closestto(proximal, 17) 
+            result[titles.prx_closest.format(index = 21)] = closestto(proximal, 21) 
+            result[titles.prx_closest.format(index = 36)] = closestto(proximal, 36)
+            result[titles.distal_closest.format(index = 15)] = closestto(distal, 15)
+            result[titles.distal_closest.format(index = 17)] = closestto(distal, 17)
+            result[titles.distal_closest.format(index = 21)] = closestto(distal, 21)
+            result[titles.distal_closest.format(index = 36)] = closestto(distal, 36)
+            result[titles.distal_junc_dist] = get_junction_distance(distal, boi_dist, effective_bulge_size_in_Hit_vicinity_regions, effective_internal_loop_size_in_Hit_vicinity_regions)            
+            result[titles.prx_junc_dist] = get_junction_distance(proximal, psep_dist, effective_bulge_size_in_Hit_vicinity_regions, effective_internal_loop_size_in_Hit_vicinity_regions)            
         else:
-            result['message'] = "immediate branching"                        
+            result[titles.msg] = "immediate branching"
     return pd.Series(result)
 
 

@@ -29,7 +29,9 @@ ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS = 3
 
 MIN_NUM_OF_LINKING_RESIDUES = 0
 MAX_NUM_OF_LINKING_RESIDUES = 1000
-
+MIN_HIT_GC_CONTENT_PERCENTAGE = 25
+MAX_HIT_GC_CONTENT_PERCENTAGE = 75
+MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP = True
 
 def is_allowed(row, type_str, size_str, limmit):
     mismatch_type = row[type_str]
@@ -106,6 +108,17 @@ def sum_of_size_in_border_line(row, border_type, type_str, size_str, start, end)
     return _sum
 
 
+def check_involvement(row):
+    if(row['number of terminal structures'] > 1):
+        return True
+    start = row['branch#1 apical loop start']
+    end = row['branch#1 apical loop end']
+    for col in ['hit start', 'hit end', 'star start', 'star end']:
+        if(start < row[col] < end ):
+            return False                    
+    return True
+
+
 def convert(row):
     row['delta G'] = float(row['delta G'])
     row['number of terminal structures'] = float(row['number of terminal structures'])
@@ -133,6 +146,8 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     level2 = level2[level2['boi GC content'] <= BOI_GC_CONTENT_MAX]
     level2 = level2[level2['num of linking residues'] >= MIN_NUM_OF_LINKING_RESIDUES]
     level2 = level2[level2['num of linking residues'] <= MAX_NUM_OF_LINKING_RESIDUES]
+    level2 = level2[level2['hit GC content'] >= MIN_HIT_GC_CONTENT_PERCENTAGE]
+    level2 = level2[level2['hit GC content'] <= MAX_HIT_GC_CONTENT_PERCENTAGE]
 
     level2 = level2[level2.apply(lambda row: is_allowed(row, "bulge type", "bulge size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
     level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
@@ -166,6 +181,9 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
 
     _sum = (sum_bulge + sum_internal)[level2.index]
     level2 = level2[_sum <= TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS]
+
+    if(MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP):
+        level2 = level2[level2.apply(lambda row: check_involvement(row), axis=1)]
 
     level2.to_csv("../Result/result_level2_filter.csv", header=header, mode='a', index=False)
     header = False
