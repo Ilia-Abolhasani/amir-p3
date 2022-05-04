@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 SETUP_METADATA = {
-    "name": "ct-analizer",
+    "name": "ct_analizer",
     "version": "1.0.0",
     "description": "",
     "url": "https://github.com/",

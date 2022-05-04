@@ -31,7 +31,7 @@ MIN_NUM_OF_LINKING_RESIDUES = 0
 MAX_NUM_OF_LINKING_RESIDUES = 1000
 MIN_HIT_GC_CONTENT_PERCENTAGE = 25
 MAX_HIT_GC_CONTENT_PERCENTAGE = 75
-MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP = True
+DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP = "YES"
 
 def is_allowed(row, type_str, size_str, limmit):
     mismatch_type = row[type_str]
@@ -182,7 +182,7 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     _sum = (sum_bulge + sum_internal)[level2.index]
     level2 = level2[_sum <= TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS]
 
-    if(MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP):
+    if(DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP == "YES"):
         level2 = level2[level2.apply(lambda row: check_involvement(row), axis=1)]
 
     level2.to_csv("../Result/result_level2_filter.csv", header=header, mode='a', index=False)

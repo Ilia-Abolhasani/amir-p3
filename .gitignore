@@ -4,6 +4,7 @@ Temp/
 miRBase_driven_data/
 CT/
 CT_high_viridi/
+CT_not_high_viridi/
 secondary_structure/
 *.fasta
 *.fna
