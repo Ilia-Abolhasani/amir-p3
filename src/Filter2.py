@@ -163,8 +163,8 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     sum_missmatch_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
     sum_bulge_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
     sum_bulge_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
-    sum_internal_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'internal type', 'internal loop total size', 'internal start', 'internal end'), axis=1)
-    sum_internal_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop total size', 'internal start', 'internal end'), axis=1)
+    sum_internal_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
+    sum_internal_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
     sum_of_residue = level2.apply(lambda row: number_of_residue(row), axis=1)
 
     _sum = sum_bulge + sum_internal + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
