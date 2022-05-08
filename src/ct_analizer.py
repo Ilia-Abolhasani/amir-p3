@@ -922,9 +922,8 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     result[titles.chromosome] = chromosome 
     result[titles.hit_position] = f'{start + hit_start-1}-{start + hit_end}'
     dg = get_deltaG(ct)       
-    [nucleotide, index, values] = get_ct_data(ct)        
-    dg =  get_dg_by_vienna(get_ct2dot_bracket(nucleotide, index, values))##########################
-    result[titles.dg] = dg#########################################################################
+    [nucleotide, index, values] = get_ct_data(ct)            
+    result[titles.dg] = dg
     result[titles.full_seq] = ''.join(nucleotide)    
     hit_seq = ''.join(nucleotide[hit_start:hit_end])
     #result[titles.full_seq_vis] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
