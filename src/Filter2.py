@@ -7,31 +7,35 @@ import sys
 # parameter
 DELTA_G_MIN = -1000
 DELTA_G_MAX = 0
-HIT_LEN_MIN = 16
-HIT_LEN_MAX = 25
+HIT_LEN_MIN = 19
+HIT_LEN_MAX = 24
 HIT_COMPLEMENTARITY_PERCENTAGE_MIN = 0.3
 HIT_COMPLEMENTARITY_PERCENTAGE_MAX = 1
-NUMBER_OF_TERMINAL_STRUCTURE_MIN = 1
-NUMBER_OF_TERMINAL_STRUCTURE_MAX = 5
-BOI_GC_CONTENT_MIN = 0.01
-BOI_GC_CONTENT_MAX = 1
+NUMBER_OF_TERMINAL_STRUCTURE_MIN = 0
+NUMBER_OF_TERMINAL_STRUCTURE_MAX = 2
+BOI_GC_CONTENT_MIN = 20
+BOI_GC_CONTENT_MAX = 80
 BORDER_LINE_MISMATCH_MAX = 3
 BORDER_LINE_BULGE_MAX = 3
 BORDER_LINE_INTERNAL_MAX = 3
 TOTAL_NUM_OF_NONMATCHING_POSITIONS = 5
-TOTAL_NUM_OF_MISMACHED_POSITIONS = 4
+TOTAL_NUM_OF_MISMACHED_POSITIONS = 5
 TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS = 3
-MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION = 2
+MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION = 3
 MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION = 3
-MINIMUM_REQUIRED_CLEAR_REGION = 8
+MINIMUM_REQUIRED_CLEAR_REGION = 13
 ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS = 3
 ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION = 5
 
-MIN_NUM_OF_LINKING_RESIDUES = 0
-MAX_NUM_OF_LINKING_RESIDUES = 1000
-MIN_HIT_GC_CONTENT_PERCENTAGE = 25
-MAX_HIT_GC_CONTENT_PERCENTAGE = 75
+MIN_NUM_OF_LINKING_RESIDUES = 6
+MAX_NUM_OF_LINKING_RESIDUES = 150
+MIN_HIT_GC_CONTENT_PERCENTAGE = 20
+MAX_HIT_GC_CONTENT_PERCENTAGE = 80
 DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP = "YES"
+
+BORDER_LINE_STRUCTURE_ALLOWANCE = "1 END ONLY"  # "NOT ACCEPTED"   "1 END ONLY" "BOTH END"
+PRECURSOR_MFEI_MIN = 0.85
+PRECURSOR_MFEI_MAX = 10
 
 def is_allowed(row, type_str, size_str, limmit):
     mismatch_type = row[type_str]
@@ -124,9 +128,10 @@ def convert(row):
     row['number of terminal structures'] = float(row['number of terminal structures'])
     row['num of linking residues'] = float(row['num of linking residues'])
     row['boi GC content'] = float(row['boi GC content'])
+    row['precursor MFEI'] = float(row['precursor MFEI'])
     for item in ['mismatch type', 'mismatch size', 'mismatch start', 'mismatch end',
                  'bulge type', 'bulge size', 'bulge start', 'bulge end',
-                 'internal type', 'internal loop total size', 'internal start', 'internal end']:
+                 'internal type', 'internal loop total size', 'internal start', 'internal end', 'internal loop HSBL']:
         row[item] = eval(row[item])
     return row
 
@@ -142,12 +147,18 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     level2 = level2[level2['hit complementarity percentage'] <= HIT_COMPLEMENTARITY_PERCENTAGE_MAX]
     level2 = level2[level2['number of terminal structures'] >= NUMBER_OF_TERMINAL_STRUCTURE_MIN]
     level2 = level2[level2['number of terminal structures'] <= NUMBER_OF_TERMINAL_STRUCTURE_MAX]
+    level2['hit GC content'] = level2['hit GC content'] * 100  ############ must be removed
+    level2['boi GC content'] = level2['boi GC content'] * 100  ############ must be removed
     level2 = level2[level2['boi GC content'] >= BOI_GC_CONTENT_MIN]
     level2 = level2[level2['boi GC content'] <= BOI_GC_CONTENT_MAX]
     level2 = level2[level2['num of linking residues'] >= MIN_NUM_OF_LINKING_RESIDUES]
     level2 = level2[level2['num of linking residues'] <= MAX_NUM_OF_LINKING_RESIDUES]
+
     level2 = level2[level2['hit GC content'] >= MIN_HIT_GC_CONTENT_PERCENTAGE]
     level2 = level2[level2['hit GC content'] <= MAX_HIT_GC_CONTENT_PERCENTAGE]
+
+    level2 = level2[level2['precursor MFEI'] >= PRECURSOR_MFEI_MIN]
+    level2 = level2[level2['precursor MFEI'] <= PRECURSOR_MFEI_MAX]
 
     level2 = level2[level2.apply(lambda row: is_allowed(row, "bulge type", "bulge size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
     level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION), axis=1)]
@@ -170,7 +181,7 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     _sum = sum_bulge + sum_internal + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
     level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS]
 
-    _sum = (_sum + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal) * 2)[level2.index]
+    _sum = (_sum + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal) * 1)[level2.index] ###### Changed from 2 to 1
     level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION]
 
     _sum = (sum_missmatch + sum_bulge + sum_internal)[level2.index]
@@ -182,8 +193,14 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
     _sum = (sum_bulge + sum_internal)[level2.index]
     level2 = level2[_sum <= TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS]
 
-    if(DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP == "YES"):
+    if DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP == "YES":
         level2 = level2[level2.apply(lambda row: check_involvement(row), axis=1)]
 
+    border_proximal = (sum_missmatch_border_proximal + sum_bulge_border_proximal + sum_internal_border_proximal)[level2.index] == 0
+    border_distal = (sum_missmatch_border_distal + sum_bulge_border_distal + sum_internal_border_distal)[level2.index] == 0
+    if BORDER_LINE_STRUCTURE_ALLOWANCE == "NOT ACCEPTED":
+        level2 = level2[border_proximal & border_distal]
+    if BORDER_LINE_STRUCTURE_ALLOWANCE == "1 END ONLY":
+        level2 = level2[border_proximal | border_distal]
     level2.to_csv("../Result/result_level2_filter.csv", header=header, mode='a', index=False)
     header = False
