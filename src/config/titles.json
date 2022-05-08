@@ -75,6 +75,7 @@
     "bulge_type": "bulge type",
     "bulge_start": "bulge start",
     "bulge_end": "bulge end",
+    "bulge_strand": "bulge strand",
     "inter": "internal loop",
     "inter_HSBL": "internal loop HSBL",
     "inter_SSBL": "internal loop SSBL",

@@ -934,8 +934,8 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     flanking_gc_content = get_gc_content(nucleotide)
     result[titles.flanking_gc] = flanking_gc_content
     result[titles.flanking_mfei] = get_MFEI(dg, flanking_gc_content, nucleotide)
-    result[titles.hit_gc_content] =  get_gc_content(hit_seq)
-    inc_srange = values[hit_start:hit_end] # Incomplete_Star_range    
+    result[titles.hit_gc_content] = get_gc_content(hit_seq)
+    inc_srange = values[hit_start:hit_end]  # Incomplete_Star_range
     [complementarity_in_hit_region, complementarity_in_hit_region_percentage] = get_complementarity_in_hit_region(inc_srange, hit_len)    
     result[titles.cmplt_hit_region] = complementarity_in_hit_region 
     result[titles.hit_cmplt_pct]  = complementarity_in_hit_region_percentage
@@ -987,7 +987,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     star_start = istar_min ############################################
     star_end = istar_max   ############################################
     #set1 = set(range(star_start-1 , star_end))
-    set1 = set(range(star_start-2 , star_end+1)) ######################
+    set1 = set(range(star_start-2, star_end+1)) ######################
     set2 = set(range(hit_start, hit_end))            
     if(len(set1.intersection(set2)) > 0):        
         result[titles.msg] = 'overlap between miRNA and miRNA*'        
@@ -1048,10 +1048,10 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         else:
             result[titles.pre_amfe] = ""
             result[titles.pre_mfei] = ""            
-    precursor_array = [hit_start+1,hit_end, star_start_real, star_end_real]
+    precursor_array = [hit_start+1, hit_end, star_start_real, star_end_real]
     precursor_start = min(precursor_array)
     precursor_end = max(precursor_array)
-    result[titles.pre_name] =  f'{chromosome}|{sign}|{start + precursor_start}-{start + precursor_end}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
+    result[titles.pre_name] = f'{chromosome}|{sign}|{start + precursor_start}-{start + precursor_end}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
     result[titles.pre_seq] = ''.join(_n)
     result[titles.pre_seq_vis] = visualization(_n, _i, _v, hit_start - (s - 1), hit_end - (s - 1), 1,  e - (s - 1), star_start_real- (s - 1), star_end_real- (s - 1))
     result[titles.term_struc_range] = [i+1 for i in [terminal_structure_range[0], terminal_structure_range[-1]]]                            
@@ -1129,12 +1129,13 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             result[titles.mismatch_type] = mis_loc_type
             result[titles.mismatch_start] = mis_start
             result[titles.mismatch_end] = mis_end
-            [bulge, bulge_size, bulge_loc_type, bulge_start, bulge_end,bulge_type] = get_bulge(domain, values, hit_start, hit_end, mir_type)
+            [bulge, bulge_size, bulge_loc_type, bulge_start, bulge_end, bulge_type] = get_bulge(domain, values, hit_start, hit_end, mir_type)
             result[titles.bulge] = bulge
             result[titles.bulge_size] = bulge_size
             result[titles.bulge_type] = bulge_loc_type
             result[titles.bulge_start] = bulge_start
             result[titles.bulge_end] = bulge_end
+            result[titles.bulge_strand] = bulge_type
             [internal_loop, size_HSBL, size_SSBL, intr_loc_type, intr_start, intr_end] = get_internal_loop(domain, values, MCMA, hit_start, hit_end, mir_type)
             result[titles.inter] = internal_loop
             result[titles.inter_HSBL] = size_HSBL
@@ -1167,3 +1168,6 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         else:
             result[titles.msg] = "immediate branching"
     return pd.Series(result)
+
+
+df = get_row("CM040440.1|-|10048580-10049000|201-221", "./example.ct", 0)
