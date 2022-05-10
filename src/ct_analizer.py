@@ -877,13 +877,13 @@ def get_MFEI(dg, gc, nuc):
 
 def get_dg_by_vienna(dotbracket):
     dotbracket = dotbracket.replace("%5Cn", "\n")    
-    process = Popen(["RNAeval", "-T", "22"], stdout=PIPE)
+    process = Popen(["RNAeval", "-T", "22"], stdout=PIPE, stdin=PIPE, stderr=STDOUT)    
     (output, err) = process.communicate(input=bytes(dotbracket, 'ascii'))        
     exit_code = process.wait()          
     if(err):
         dg = None        
-    else:
-        dg = float(output[(len(dotbracket)+2):-2])   
+    else:                
+        dg = float(output[(len(dotbracket)+2):-2])           
     return dg
 
 
@@ -904,7 +904,7 @@ def get_dg_by_unafold(nucleotide, index, values):
 server_url = "http://jupyter.sysmanager.ir/tree/plant_microRNA_prediction"
 #MCMA: maximum consecutive mismatch allowance
 def get_row(tag, path, extra, acceptable_terminal_structures = 5, MCMA=2, effective_bulge_size_in_Hit_vicinity_regions=4,            
-effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAFold"):        
+effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAFold"):            
     result = {}    
     ct = reformatCT(path)
     result[titles.seq_name] = tag
@@ -921,9 +921,9 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     result[titles.sign] = sign
     result[titles.chromosome] = chromosome 
     result[titles.hit_position] = f'{start + hit_start-1}-{start + hit_end}'
-    dg = get_deltaG(ct)
+    dg = get_deltaG(ct)       
+    [nucleotide, index, values] = get_ct_data(ct)            
     result[titles.dg] = dg
-    [nucleotide, index, values] = get_ct_data(ct)
     result[titles.full_seq] = ''.join(nucleotide)    
     hit_seq = ''.join(nucleotide[hit_start:hit_end])
     #result[titles.full_seq_vis] = visualization(nucleotide, index, values, hit_start, hit_end, None, None,None, None)
