@@ -1,7 +1,7 @@
-import numpy as np
-import tqdm
-import pandas as pd
 import sys
+import tqdm
+import numpy as np
+import pandas as pd
 
 
 # parameter
