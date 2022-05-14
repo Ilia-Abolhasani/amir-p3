@@ -11,32 +11,33 @@ HIT_LEN_MIN = 19
 HIT_LEN_MAX = 24
 HIT_COMPLEMENTARITY_PERCENTAGE_MIN = 0.3
 HIT_COMPLEMENTARITY_PERCENTAGE_MAX = 1
-NUMBER_OF_TERMINAL_STRUCTURE_MIN = 0
-NUMBER_OF_TERMINAL_STRUCTURE_MAX = 2
+NUMBER_OF_TERMINAL_STRUCTURE_MIN = 1
+NUMBER_OF_TERMINAL_STRUCTURE_MAX = 1
 BOI_GC_CONTENT_MIN = 20
 BOI_GC_CONTENT_MAX = 80
-BORDER_LINE_MISMATCH_MAX = 3
-BORDER_LINE_BULGE_MAX = 3
-BORDER_LINE_INTERNAL_MAX = 3
+BORDER_LINE_MISMATCH_MAX = 1
+BORDER_LINE_BULGE_MAX = 0
+BORDER_LINE_INTERNAL_MAX = 0
 TOTAL_NUM_OF_NONMATCHING_POSITIONS = 5
 TOTAL_NUM_OF_MISMACHED_POSITIONS = 5
 TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS = 3
-MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION = 3
-MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION = 3
+MAX_ALLOWED_MISMATCH_SIZE_IN_HIT_REGION = 2
+MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION = 1
+MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION = 0
 MAX_ALLOWED_HSBL_SSBL_SIZE = 4
 MINIMUM_REQUIRED_CLEAR_REGION = 13
 ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS = 3
 ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION = 5
 
-MIN_NUM_OF_LINKING_RESIDUES = 6
-MAX_NUM_OF_LINKING_RESIDUES = 150
+MIN_NUM_OF_LINKING_RESIDUES = 5
+MAX_NUM_OF_LINKING_RESIDUES = 80
 MIN_HIT_GC_CONTENT_PERCENTAGE = 20
 MAX_HIT_GC_CONTENT_PERCENTAGE = 80
 DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP = "YES"
 
 BORDER_LINE_STRUCTURE_ALLOWANCE = "1 END ONLY"  # "NOT ACCEPTED"   "1 END ONLY" "BOTH END"
 PRECURSOR_MFEI_MIN = 0.85
-PRECURSOR_MFEI_MAX = 10
+PRECURSOR_MFEI_MAX = 3
 
 def is_allowed(row, type_str, size_str, limmit):
     mismatch_type = row[type_str]
@@ -139,6 +140,8 @@ def convert(row):
     row['number of terminal structures'] = float(row['number of terminal structures'])
     row['num of linking residues'] = float(row['num of linking residues'])
     row['boi GC content'] = float(row['boi GC content'])
+    if(row['precursor MFEI'] == "-"):
+        row['precursor MFEI'] = 10*10
     row['precursor MFEI'] = float(row['precursor MFEI'])
     for item in ['mismatch type', 'mismatch size', 'mismatch start', 'mismatch end',
                  'bulge type', 'bulge size', 'bulge start', 'bulge end', "bulge strand",
@@ -183,7 +186,7 @@ for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksi
 
     level2 = level2[level2['precursor MFEI'] >= PRECURSOR_MFEI_MIN]
     level2 = level2[level2['precursor MFEI'] <= PRECURSOR_MFEI_MAX]
-
+    level2 = level2[level2.apply(lambda row: is_allowed(row, "mismatch type", "mismatch size", MAX_ALLOWED_MISMATCH_SIZE_IN_HIT_REGION),axis=1)]
     level2 = level2[level2.apply(lambda row: is_allowed(row, "bulge type", "bulge size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
     level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION), axis=1)]
     level2 = level2[level2.apply(lambda row: is_allowed_clear(row), axis=1)]
