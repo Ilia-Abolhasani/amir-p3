@@ -920,7 +920,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     result[titles.hit_end] = hit_end
     result[titles.sign] = sign
     result[titles.chromosome] = chromosome 
-    result[titles.hit_position] = f'{start + hit_start-1}-{start + hit_end}'
+    result[titles.hit_position] = f'{start + 1 + hit_start}-{start + hit_end}'
     dg = get_deltaG(ct)       
     [nucleotide, index, values] = get_ct_data(ct)            
     result[titles.dg] = dg
@@ -1009,8 +1009,12 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     boi_seq = ''.join(nucleotide[boi_start-1: boi_end].tolist())
     result[titles.boi_start] = boi_start
     result[titles.boi_end] = boi_end
-    result[titles.boi_seq] = boi_seq
-    result[titles.boi_name] = f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
+    result[titles.boi_seq] = boi_seq    
+    if(sign == "+"):
+        result[titles.boi_name] = f'{chromosome}|{sign}|{start + boi_start}-{start + boi_end}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
+    else:
+        result[titles.boi_name] = f'{chromosome}|{sign}|{(end - boi_end + 1)}-{(end - boi_start + 1)}|{hit_start - boi_start + 2}-{hit_end - boi_start + 1}'
+        
     boi_gc = get_gc_content(boi_seq)
     result[titles.boi_gc] =  boi_gc
     #result['full seq visualization'] = visualization(nucleotide, index, values, hit_start, hit_end, boi_start,  boi_end, star_start_real, star_end_real)
@@ -1051,7 +1055,10 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     precursor_array = [hit_start+1, hit_end, star_start_real, star_end_real]
     precursor_start = min(precursor_array)
     precursor_end = max(precursor_array)
-    result[titles.pre_name] = f'{chromosome}|{sign}|{start + precursor_start}-{start + precursor_end}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
+    if(sign == "+"):
+        result[titles.pre_name] = f'{chromosome}|{sign}|{start + precursor_start}-{start + precursor_end}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
+    else:
+        result[titles.pre_name] = f'{chromosome}|{sign}|{(end -  precursor_end + 1)}-{(end -  precursor_start + 1 )}|{hit_start - precursor_start + 2}-{hit_end - precursor_start + 1}'
     result[titles.pre_seq] = ''.join(_n)
     result[titles.pre_seq_vis] = visualization(_n, _i, _v, hit_start - (s - 1), hit_end - (s - 1), 1,  e - (s - 1), star_start_real- (s - 1), star_end_real- (s - 1))
     result[titles.term_struc_range] = [i+1 for i in [terminal_structure_range[0], terminal_structure_range[-1]]]                            
