@@ -163,77 +163,79 @@ def loopHSBL_SSBL_check(row):
     return True
 
 
-header = True
-for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksize=10**3)):
-    level2 = chunk.apply(lambda row: convert(row), axis=1)
-    level2 = level2[level2['delta G'] >= DELTA_G_MIN]
-    level2 = level2[level2['delta G'] <= DELTA_G_MAX]
-    level2 = level2[level2['hit len'] >= HIT_LEN_MIN]
-    level2 = level2[level2['hit len'] <= HIT_LEN_MAX]
-    level2 = level2[level2['hit complementarity percentage'] >= HIT_COMPLEMENTARITY_PERCENTAGE_MIN]
-    level2 = level2[level2['hit complementarity percentage'] <= HIT_COMPLEMENTARITY_PERCENTAGE_MAX]
-    level2 = level2[level2['number of terminal structures'] >= NUMBER_OF_TERMINAL_STRUCTURE_MIN]
-    level2 = level2[level2['number of terminal structures'] <= NUMBER_OF_TERMINAL_STRUCTURE_MAX]
-    level2['hit GC content'] = level2['hit GC content']
-    level2['boi GC content'] = level2['boi GC content']
-    level2 = level2[level2['boi GC content'] >= BOI_GC_CONTENT_MIN]
-    level2 = level2[level2['boi GC content'] <= BOI_GC_CONTENT_MAX]
-    level2 = level2[level2['num of linking residues'] >= MIN_NUM_OF_LINKING_RESIDUES]
-    level2 = level2[level2['num of linking residues'] <= MAX_NUM_OF_LINKING_RESIDUES]
 
-    level2 = level2[level2['hit GC content'] >= MIN_HIT_GC_CONTENT_PERCENTAGE]
-    level2 = level2[level2['hit GC content'] <= MAX_HIT_GC_CONTENT_PERCENTAGE]
+def filter2_run():
+    header = True
+    for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksize=10**3)):
+        level2 = chunk.apply(lambda row: convert(row), axis=1)
+        level2 = level2[level2['delta G'] >= DELTA_G_MIN]
+        level2 = level2[level2['delta G'] <= DELTA_G_MAX]
+        level2 = level2[level2['hit len'] >= HIT_LEN_MIN]
+        level2 = level2[level2['hit len'] <= HIT_LEN_MAX]
+        level2 = level2[level2['hit complementarity percentage'] >= HIT_COMPLEMENTARITY_PERCENTAGE_MIN]
+        level2 = level2[level2['hit complementarity percentage'] <= HIT_COMPLEMENTARITY_PERCENTAGE_MAX]
+        level2 = level2[level2['number of terminal structures'] >= NUMBER_OF_TERMINAL_STRUCTURE_MIN]
+        level2 = level2[level2['number of terminal structures'] <= NUMBER_OF_TERMINAL_STRUCTURE_MAX]
+        level2['hit GC content'] = level2['hit GC content']
+        level2['boi GC content'] = level2['boi GC content']
+        level2 = level2[level2['boi GC content'] >= BOI_GC_CONTENT_MIN]
+        level2 = level2[level2['boi GC content'] <= BOI_GC_CONTENT_MAX]
+        level2 = level2[level2['num of linking residues'] >= MIN_NUM_OF_LINKING_RESIDUES]
+        level2 = level2[level2['num of linking residues'] <= MAX_NUM_OF_LINKING_RESIDUES]
 
-    level2 = level2[level2['precursor MFEI'] >= PRECURSOR_MFEI_MIN]
-    level2 = level2[level2['precursor MFEI'] <= PRECURSOR_MFEI_MAX]
-    level2 = level2[level2.apply(lambda row: is_allowed(row, "mismatch type", "mismatch size", MAX_ALLOWED_MISMATCH_SIZE_IN_HIT_REGION),axis=1)]
-    level2 = level2[level2.apply(lambda row: is_allowed(row, "bulge type", "bulge size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
-    level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION), axis=1)]
-    level2 = level2[level2.apply(lambda row: is_allowed_clear(row), axis=1)]
-    level2 = level2[level2.apply(lambda row: check_border_line(row, "mismatch type", "mismatch size", BORDER_LINE_MISMATCH_MAX), axis=1)]
-    level2 = level2[level2.apply(lambda row: check_border_line(row, "bulge type", "bulge size", BORDER_LINE_BULGE_MAX), axis=1)]
-    level2 = level2[level2.apply(lambda row: check_border_line(row, "internal type", "internal loop total size", BORDER_LINE_INTERNAL_MAX), axis=1)]
+        level2 = level2[level2['hit GC content'] >= MIN_HIT_GC_CONTENT_PERCENTAGE]
+        level2 = level2[level2['hit GC content'] <= MAX_HIT_GC_CONTENT_PERCENTAGE]
 
-    level2 = level2[level2.apply(lambda row: loopHSBL_SSBL_check(row), axis=1)]
+        level2 = level2[level2['precursor MFEI'] >= PRECURSOR_MFEI_MIN]
+        level2 = level2[level2['precursor MFEI'] <= PRECURSOR_MFEI_MAX]
+        level2 = level2[level2.apply(lambda row: is_allowed(row, "mismatch type", "mismatch size", MAX_ALLOWED_MISMATCH_SIZE_IN_HIT_REGION),axis=1)]
+        level2 = level2[level2.apply(lambda row: is_allowed(row, "bulge type", "bulge size", MAX_ALLOWED_BULGE_SIZE_IN_HIT_REGION), axis=1)]
+        level2 = level2[level2.apply(lambda row: is_allowed(row, "internal type", "internal loop total size", MAX_ALLOWED_INTERNAL_LOOP_SIZE_IN_HIT_REGION), axis=1)]
+        level2 = level2[level2.apply(lambda row: is_allowed_clear(row), axis=1)]
+        level2 = level2[level2.apply(lambda row: check_border_line(row, "mismatch type", "mismatch size", BORDER_LINE_MISMATCH_MAX), axis=1)]
+        level2 = level2[level2.apply(lambda row: check_border_line(row, "bulge type", "bulge size", BORDER_LINE_BULGE_MAX), axis=1)]
+        level2 = level2[level2.apply(lambda row: check_border_line(row, "internal type", "internal loop total size", BORDER_LINE_INTERNAL_MAX), axis=1)]
 
-    sum_missmatch = level2.apply(lambda row: sum_of_size_in_hit(row, 'mismatch type', 'mismatch size'), axis=1)
-    sum_bulge = level2.apply(lambda row: sum_of_size_in_hit(row, 'bulge type', 'bulge size'), axis=1)
-    sum_internal = level2.apply(lambda row: sum_of_size_in_hit(row, 'internal type', 'internal loop total size'), axis=1)
-    sum_internal_hsbl = level2.apply(lambda row: sum_of_size_in_hit(row, 'internal type', 'internal loop HSBL'),axis=1)
-    sum_missmatch_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
-    sum_missmatch_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
-    sum_bulge_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
-    sum_bulge_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
-    sum_internal_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
-    sum_internal_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
+        level2 = level2[level2.apply(lambda row: loopHSBL_SSBL_check(row), axis=1)]
 
-    sum_bulge_zero = level2.apply(lambda row: sum_of_size_in_hit_only_zero(row), axis=1)
+        sum_missmatch = level2.apply(lambda row: sum_of_size_in_hit(row, 'mismatch type', 'mismatch size'), axis=1)
+        sum_bulge = level2.apply(lambda row: sum_of_size_in_hit(row, 'bulge type', 'bulge size'), axis=1)
+        sum_internal = level2.apply(lambda row: sum_of_size_in_hit(row, 'internal type', 'internal loop total size'), axis=1)
+        sum_internal_hsbl = level2.apply(lambda row: sum_of_size_in_hit(row, 'internal type', 'internal loop HSBL'),axis=1)
+        sum_missmatch_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
+        sum_missmatch_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
+        sum_bulge_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
+        sum_bulge_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
+        sum_internal_border_proximal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'proximal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
+        sum_internal_border_distal = level2.apply(lambda row: sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
 
-    sum_of_residue = level2.apply(lambda row: number_of_residue(row), axis=1)
+        sum_bulge_zero = level2.apply(lambda row: sum_of_size_in_hit_only_zero(row), axis=1)
 
-    _sum = sum_bulge_zero + sum_internal_hsbl + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
-    level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS]
+        sum_of_residue = level2.apply(lambda row: number_of_residue(row), axis=1)
 
-    _sum = (_sum + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal) * 1)[level2.index] ###### Changed from 2 to 1
-    level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION]
+        _sum = sum_bulge_zero + sum_internal_hsbl + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
+        level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS]
 
-    _sum = (sum_missmatch + sum_bulge + sum_internal)[level2.index]
-    level2 = level2[_sum <= TOTAL_NUM_OF_NONMATCHING_POSITIONS]
+        _sum = (_sum + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal) * 1)[level2.index] ###### Changed from 2 to 1
+        level2 = level2[_sum <= ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION]
 
-    _sum = sum_missmatch[level2.index]
-    level2 = level2[_sum <= TOTAL_NUM_OF_MISMACHED_POSITIONS]
+        _sum = (sum_missmatch + sum_bulge + sum_internal)[level2.index]
+        level2 = level2[_sum <= TOTAL_NUM_OF_NONMATCHING_POSITIONS]
 
-    _sum = (sum_bulge + sum_internal)[level2.index]
-    level2 = level2[_sum <= TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS]
+        _sum = sum_missmatch[level2.index]
+        level2 = level2[_sum <= TOTAL_NUM_OF_MISMACHED_POSITIONS]
 
-    if DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP == "YES":
-        level2 = level2[level2.apply(lambda row: check_involvement(row), axis=1)]
+        _sum = (sum_bulge + sum_internal)[level2.index]
+        level2 = level2[_sum <= TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS]
 
-    border_proximal = (sum_missmatch_border_proximal + sum_bulge_border_proximal + sum_internal_border_proximal)[level2.index] == 0
-    border_distal = (sum_missmatch_border_distal + sum_bulge_border_distal + sum_internal_border_distal)[level2.index] == 0
-    if BORDER_LINE_STRUCTURE_ALLOWANCE == "NOT ACCEPTED":
-        level2 = level2[border_proximal & border_distal]
-    if BORDER_LINE_STRUCTURE_ALLOWANCE == "1 END ONLY":
-        level2 = level2[border_proximal | border_distal]
-    level2.to_csv("../Result/result_level2_filter.csv", header=header, mode='a', index=False)
-    header = False
+        if DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP == "YES":
+            level2 = level2[level2.apply(lambda row: check_involvement(row), axis=1)]
+
+        border_proximal = (sum_missmatch_border_proximal + sum_bulge_border_proximal + sum_internal_border_proximal)[level2.index] == 0
+        border_distal = (sum_missmatch_border_distal + sum_bulge_border_distal + sum_internal_border_distal)[level2.index] == 0
+        if BORDER_LINE_STRUCTURE_ALLOWANCE == "NOT ACCEPTED":
+            level2 = level2[border_proximal & border_distal]
+        if BORDER_LINE_STRUCTURE_ALLOWANCE == "1 END ONLY":
+            level2 = level2[border_proximal | border_distal]
+        level2.to_csv("../Result/result_level2_filter.csv", header=header, mode='a', index=False)
+        header = False
