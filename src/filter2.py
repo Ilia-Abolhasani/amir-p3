@@ -166,7 +166,7 @@ def loopHSBL_SSBL_check(row):
 
 def filter2_run():
     header = True
-    for chunk in tqdm.tqdm(pd.read_csv("../Result/result_level1_filter.csv", chunksize=10**3)):
+    for chunk in tqdm.tqdm(pd.read_csv("./Result/result_level1_filter.csv", chunksize=10**3)):
         level2 = chunk.apply(lambda row: convert(row), axis=1)
         level2 = level2[level2['delta G'] >= DELTA_G_MIN]
         level2 = level2[level2['delta G'] <= DELTA_G_MAX]
@@ -237,5 +237,5 @@ def filter2_run():
             level2 = level2[border_proximal & border_distal]
         if BORDER_LINE_STRUCTURE_ALLOWANCE == "1 END ONLY":
             level2 = level2[border_proximal | border_distal]
-        level2.to_csv("../Result/result_level2_filter.csv", header=header, mode='a', index=False)
+        level2.to_csv("./Result/result_level2_filter.csv", header=header, mode='a', index=False)
         header = False

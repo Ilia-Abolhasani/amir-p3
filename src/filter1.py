@@ -9,12 +9,12 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 
-def filter1_run(input_file="./Result/ct_analizer_cluster.csv", output_file="./Result/result_level1_filter.csv", chunksize=10 ** 5):
+def filter1_run(input_file="./Result/ct_analizer_clustered.csv", output_file="./Result/result_level1_filter.csv", chunksize=10 ** 5):
     with open('./src/config/titles.json') as json_file:
         titles = dotdict(json.load(json_file))
 
     header = True
-    for chunk in tqdm(pd.read_csv(input_file, chunksize=chunksize)):
+    for chunk in tqdm.tqdm(pd.read_csv(input_file, chunksize=chunksize)):
         level1 = chunk[chunk[titles.msg] == '-']
         level1 = level1[level1[titles.star_branching] != 'yes']
         level1 = level1[level1[titles.domain_inter_struc] != 'yes']
