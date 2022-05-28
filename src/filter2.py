@@ -36,7 +36,7 @@ MAX_HIT_GC_CONTENT_PERCENTAGE = 80
 DELETE_IF_MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP = "YES"
 
 BORDER_LINE_STRUCTURE_ALLOWANCE = "1 END ONLY"  # "NOT ACCEPTED"   "1 END ONLY" "BOTH END"
-PRECURSOR_MFEI_MIN = 0.85
+PRECURSOR_MFEI_MIN = 0.5
 PRECURSOR_MFEI_MAX = 3
 
 def is_allowed(row, type_str, size_str, limmit):
@@ -164,9 +164,9 @@ def loopHSBL_SSBL_check(row):
 
 
 
-def filter2_run():
+def filter2_run(input_file, output_file, chunksize=10 ** 5):
     header = True
-    for chunk in tqdm.tqdm(pd.read_csv("./Result/result_level1_filter.csv", chunksize=10**3)):
+    for chunk in tqdm.tqdm(pd.read_csv(input_file, chunksize=chunksize)):
         level2 = chunk.apply(lambda row: convert(row), axis=1)
         level2 = level2[level2['delta G'] >= DELTA_G_MIN]
         level2 = level2[level2['delta G'] <= DELTA_G_MAX]
@@ -237,5 +237,5 @@ def filter2_run():
             level2 = level2[border_proximal & border_distal]
         if BORDER_LINE_STRUCTURE_ALLOWANCE == "1 END ONLY":
             level2 = level2[border_proximal | border_distal]
-        level2.to_csv("./Result/result_level2_filter.csv", header=header, mode='a', index=False)
+        level2.to_csv(output_file, header=header, mode='a', index=False)
         header = False
