@@ -1,4 +1,5 @@
 import sys
+import json
 import tqdm
 import numpy as np
 import pandas as pd
@@ -84,7 +85,7 @@ def _sum_of_size_in_border_line(row, border_type, type_str, size_str, start, end
     for i in range(len(mismatch_type)):
         if mismatch_type[i] == border_type:
             if border_type == "distal border line":
-                if mir_type  == '5p':
+                if mir_type == '5p':
                     _sum += _size[i] - _start[i]
                 if mir_type == '3p':
                     _sum += _size[i] - _end[i]
@@ -157,30 +158,60 @@ def filter2_run(inp, config):
 
     level2 = level2[level2['precursor MFEI'] >= config.precursor_mfei_min]
     level2 = level2[level2['precursor MFEI'] <= config.precursor_mfei_max]
-    level2 = level2[level2.apply(lambda row: _is_allowed(row, "mismatch type", "mismatch size", config.max_allowed_mismatch_size_in_hit_region),axis=1)]
-    level2 = level2[level2.apply(lambda row: _is_allowed(row, "bulge type", "bulge size", config.max_allowed_bulge_size_in_hit_region), axis=1)]
-    level2 = level2[level2.apply(lambda row: _is_allowed(row, "internal type", "internal loop total size", config.max_allowed_internal_loop_size_in_hit_region), axis=1)]
-    level2 = level2[level2.apply(lambda row: _is_allowed_clear(row, config.minimum_required_clear_region), axis=1)]
-    level2 = level2[level2.apply(lambda row: _check_border_line(row, "mismatch type", "mismatch size", config.border_line_mismatch_max), axis=1)]
-    level2 = level2[level2.apply(lambda row: _check_border_line(row, "bulge type", "bulge size", config.border_line_bulge_max), axis=1)]
-    level2 = level2[level2.apply(lambda row: _check_border_line(row, "internal type", "internal loop total size", config.border_line_internal_max), axis=1)]
 
-    level2 = level2[level2.apply(lambda row: _loopHSBL_SSBL_check(row, config.max_allowed_hsbl_ssbl_size), axis=1)]
+    cols = ["mismatch type", "mismatch size"]
+    level2 = level2[level2[cols].apply(lambda row: _is_allowed(row, "mismatch type", "mismatch size", config.max_allowed_mismatch_size_in_hit_region),axis=1)]
 
-    sum_missmatch = level2.apply(lambda row: _sum_of_size_in_hit(row, 'mismatch type', 'mismatch size'), axis=1)
-    sum_bulge = level2.apply(lambda row: _sum_of_size_in_hit(row, 'bulge type', 'bulge size'), axis=1)
-    sum_internal = level2.apply(lambda row: _sum_of_size_in_hit(row, 'internal type', 'internal loop total size'), axis=1)
-    sum_internal_hsbl = level2.apply(lambda row: _sum_of_size_in_hit(row, 'internal type', 'internal loop HSBL'),axis=1)
-    sum_missmatch_border_proximal = level2.apply(lambda row: _sum_of_size_in_border_line(row, 'proximal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
-    sum_missmatch_border_distal = level2.apply(lambda row: _sum_of_size_in_border_line(row, 'distal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
-    sum_bulge_border_proximal = level2.apply(lambda row: _sum_of_size_in_border_line(row, 'proximal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
-    sum_bulge_border_distal = level2.apply(lambda row: _sum_of_size_in_border_line(row, 'distal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
-    sum_internal_border_proximal = level2.apply(lambda row: _sum_of_size_in_border_line(row, 'proximal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
-    sum_internal_border_distal = level2.apply(lambda row: _sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
+    cols = ["bulge type", "bulge size"]
+    level2 = level2[level2[cols].apply(lambda row: _is_allowed(row, "bulge type", "bulge size", config.max_allowed_bulge_size_in_hit_region), axis=1)]
 
-    sum_bulge_zero = level2.apply(lambda row: _sum_of_size_in_hit_only_zero(row), axis=1)
+    cols = ["internal type", "internal loop total size"]
+    level2 = level2[level2[cols].apply(lambda row: _is_allowed(row, "internal type", "internal loop total size", config.max_allowed_internal_loop_size_in_hit_region), axis=1)]
 
-    sum_of_residue = level2.apply(lambda row: _number_of_residue(row), axis=1)
+    cols = [titles.distal_junc_dist, titles.prx_junc_dist]
+    level2 = level2[level2[cols].apply(lambda row: _is_allowed_clear(row, config.minimum_required_clear_region), axis=1)]
+
+    cols = ["mismatch type", "mismatch size"]
+    level2 = level2[level2[cols].apply(lambda row: _check_border_line(row, "mismatch type", "mismatch size", config.border_line_mismatch_max), axis=1)]
+
+    cols = ["bulge type", "bulge size"]
+    level2 = level2[level2[cols].apply(lambda row: _check_border_line(row, "bulge type", "bulge size", config.border_line_bulge_max), axis=1)]
+
+    cols = ["internal type", "internal loop total size"]
+    level2 = level2[level2[cols].apply(lambda row: _check_border_line(row, "internal type", "internal loop total size", config.border_line_internal_max), axis=1)]
+
+    cols = ["internal type", "internal loop HSBL", "internal loop SSBL"]
+    level2 = level2[level2[cols].apply(lambda row: _loopHSBL_SSBL_check(row, config.max_allowed_hsbl_ssbl_size), axis=1)]
+
+    cols = ['mismatch type', 'mismatch size']
+    sum_missmatch = level2[cols].apply(lambda row: _sum_of_size_in_hit(row, 'mismatch type', 'mismatch size'), axis=1)
+
+    cols = [ 'bulge type', 'bulge size']
+    sum_bulge = level2[cols].apply(lambda row: _sum_of_size_in_hit(row, 'bulge type', 'bulge size'), axis=1)
+
+    cols = ['internal type', 'internal loop total size']
+    sum_internal = level2[cols].apply(lambda row: _sum_of_size_in_hit(row, 'internal type', 'internal loop total size'), axis=1)
+
+    cols = ['internal type', 'internal loop HSBL']
+    sum_internal_hsbl = level2[cols].apply(lambda row: _sum_of_size_in_hit(row, 'internal type', 'internal loop HSBL'),axis=1)
+
+    cols = [titles.mir_type, 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end']
+    sum_missmatch_border_proximal = level2[cols].apply(lambda row: _sum_of_size_in_border_line(row, 'proximal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
+    sum_missmatch_border_distal = level2[cols].apply(lambda row: _sum_of_size_in_border_line(row, 'distal border line', 'mismatch type', 'mismatch size', 'mismatch start', 'mismatch end'), axis=1)
+
+    cols = [titles.mir_type, 'bulge type', 'bulge size', 'bulge start', 'bulge end']
+    sum_bulge_border_proximal = level2[cols].apply(lambda row: _sum_of_size_in_border_line(row, 'proximal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
+    sum_bulge_border_distal = level2[cols].apply(lambda row: _sum_of_size_in_border_line(row, 'distal border line', 'bulge type', 'bulge size', 'bulge start', 'bulge end'), axis=1)
+
+    cols = [titles.mir_type, 'internal type', 'internal loop HSBL', 'internal start', 'internal end']
+    sum_internal_border_proximal = level2[cols].apply(lambda row: _sum_of_size_in_border_line(row, 'proximal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
+    sum_internal_border_distal = level2[cols].apply(lambda row: _sum_of_size_in_border_line(row, 'distal border line', 'internal type', 'internal loop HSBL', 'internal start', 'internal end'), axis=1)
+
+    cols = [titles.bulge_type, titles.bulge_strand, titles.bulge_size]
+    sum_bulge_zero = level2[cols].apply(lambda row: _sum_of_size_in_hit_only_zero(row), axis=1)
+
+    cols = [titles.hit_start, titles.hit_end, titles.psep, titles.mir_type]
+    sum_of_residue = level2[cols].apply(lambda row: _number_of_residue(row), axis=1)
 
     _sum = sum_bulge_zero + sum_internal_hsbl + sum_bulge_border_proximal + sum_bulge_border_distal + sum_internal_border_proximal + sum_internal_border_distal + sum_of_residue
     level2 = level2[_sum <= config.acceptable_num_for_hit_locations_in_bulges_or_loops]
@@ -198,7 +229,9 @@ def filter2_run(inp, config):
     level2 = level2[_sum <= config.total_num_of_positions_in_bulges_and_loops]
 
     if config.delete_if_mature_duplex_involvement_in_apical_loop == "YES":
-        level2 = level2[level2.apply(lambda row: _check_involvement(row), axis=1)]
+        cols = [titles.n_term_struc, titles.hit_start, titles.hit_end, titles.star_start, titles.star_end,
+                'branch#1 apical loop start', 'branch#1 apical loop end']
+        level2 = level2[level2[cols].apply(lambda row: _check_involvement(row), axis=1)]
 
     border_proximal = (sum_missmatch_border_proximal + sum_bulge_border_proximal + sum_internal_border_proximal)[level2.index] == 0
     border_distal = (sum_missmatch_border_distal + sum_bulge_border_distal + sum_internal_border_distal)[level2.index] == 0
@@ -211,7 +244,7 @@ def filter2_run(inp, config):
 
 #BORDER_LINE_STRUCTURE_ALLOWANCE = "1 END ONLY"  # "NOT ACCEPTED"   "1 END ONLY" "BOTH END"
 def filter2(input_file, output_file, config=None, chunksize=10 ** 5):
-    if config is None: # read from filter_level2.json
+    if config is None:  # read from filter_level2.json
         with open('./src/config/filter_level2.json') as json_file:
             config = json.load(json_file)
     config = DotDict(config)
