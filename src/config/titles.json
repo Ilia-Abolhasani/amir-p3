@@ -92,6 +92,8 @@
     "distal_junc_dist": "Loop distal junction distance",
     "prx_junc_dist": "Loop proximal junction distance",
     "conn_hit_start": "connectivity hit start{index}",
+    "nuc_hit_start": "nucleotide hit start{index}",
     "conn_hit_end": "connectivity hit end{index}",
+    "nuc_hit_end": "nucleotide hit end{index}",
     "msg": "message"
 }
