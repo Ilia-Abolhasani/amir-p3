@@ -91,5 +91,7 @@
     "distal_closest": "distal closest to {index:d}",
     "distal_junc_dist": "Loop distal junction distance",
     "prx_junc_dist": "Loop proximal junction distance",
+    "conn_hit_start": "connectivity hit start{index}",
+    "conn_hit_end": "connectivity hit end{index}",
     "msg": "message"
 }

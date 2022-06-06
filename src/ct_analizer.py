@@ -904,7 +904,7 @@ def get_dg_by_unafold(nucleotide, index, values):
 server_url = "http://jupyter.sysmanager.ir/tree/plant_microRNA_prediction"
 #MCMA: maximum consecutive mismatch allowance
 def get_row(tag, path, extra, acceptable_terminal_structures = 5, MCMA=2, effective_bulge_size_in_Hit_vicinity_regions=4,            
-effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAFold"):            
+effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAFold"):
     result = {}    
     ct = reformatCT(path)
     result[titles.seq_name] = tag
@@ -1174,7 +1174,10 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             result[titles.prx_junc_dist] = get_junction_distance(proximal, psep_dist, effective_bulge_size_in_Hit_vicinity_regions, effective_internal_loop_size_in_Hit_vicinity_regions)            
         else:
             result[titles.msg] = "immediate branching"
+    # for 5p
+    for i, n in [[-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
+        result[titles.conn_hit_start.format(index=n)] = 1 if values[hit_start - i] != 0 else 0
+
+    for i, n in [[-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
+        result[titles.conn_hit_end.format(index=n)] = 1 if values[(hit_end-1) - i] != 0 else 0
     return pd.Series(result)
-
-
-df = get_row("CM040440.1|-|10048580-10049000|201-221", "./example.ct", 0)
