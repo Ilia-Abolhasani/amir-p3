@@ -1176,10 +1176,10 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             result[titles.msg] = "immediate branching"
     # for 5p
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
-        result[titles.conn_hit_start.format(index=n)] = 1 if values[hit_start - i] != 0 else 0
-        result[titles.nuc_hit_start.format(index=n)] = nucleotide[hit_start - i]
+        result[titles.conn_hit_start.format(index=n)] = 1 if values[hit_start + i] != 0 else 0
+        result[titles.nuc_hit_start.format(index=n)] = nucleotide[hit_start + i]
 
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
-        result[titles.conn_hit_end.format(index=n)] = 1 if values[(hit_end-1) - i] != 0 else 0
-        result[titles.nuc_hit_end.format(index=n)] = nucleotide[(hit_end-1) - i]
+        result[titles.conn_hit_end.format(index=n)] = 1 if values[(hit_end-1) + i] != 0 else 0
+        result[titles.nuc_hit_end.format(index=n)] = nucleotide[(hit_end-1) + i]
     return pd.Series(result)
