@@ -543,6 +543,7 @@ def getLocation(start, end, hit_start, hit_end, mir_type):
 
 
 def get_mismatch(domain, values, MCMA, hit_start, hit_end, mir_type): #MCMA: maximum consecutive mismatch allowance    
+    miss_index_to_nuc = {}
     size = []
     location_type = []
     location_start = []
@@ -568,7 +569,11 @@ def get_mismatch(domain, values, MCMA, hit_start, hit_end, mir_type): #MCMA: max
                     [loc_type, loc_start, loc_end ] = getLocation(lastI+2, d, hit_start, hit_end, mir_type)
                     location_type.append(loc_type)
                     location_start.append(loc_start)
-                    location_end.append(loc_end)                    
+                    location_end.append(loc_end)       
+                    counter = 1
+                    for i in range(d-1, lastI, -1):
+                        miss_index_to_nuc[i+1] = current + counter
+                        counter += 1 
                 zero_counter = 0                                    
             last = current
             lastI = d
@@ -577,7 +582,7 @@ def get_mismatch(domain, values, MCMA, hit_start, hit_end, mir_type): #MCMA: max
         location_type = location_type[::-1]
         location_start = location_start[::-1]
         location_end = location_end[::-1]
-    return [mismatch_counter, size, location_type, location_start, location_end]
+    return [mismatch_counter, size, location_type, location_start, location_end, miss_index_to_nuc]
 
 
 def get_bulge(domain, values, hit_start, hit_end, mir_type): 
@@ -1130,7 +1135,7 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             interfering_structures_domain_star = get_interfering_structures(domain_star, values)
             result[titles.domain_star_inter_struc] = "yes" if interfering_structures_domain_star else "no"
                         
-            [mismatch, mismatch_size, mis_loc_type, mis_start, mis_end] = get_mismatch(domain, values,MCMA, hit_start, hit_end, mir_type)            
+            [mismatch, mismatch_size, mis_loc_type, mis_start, mis_end, miss_index_to_nuc] = get_mismatch(domain, values,MCMA, hit_start, hit_end, mir_type)            
             result[titles.mismatch] = mismatch
             result[titles.mismatch_size] = mismatch_size
             result[titles.mismatch_type] = mis_loc_type
@@ -1176,10 +1181,30 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
             result[titles.msg] = "immediate branching"
     # for 5p
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
-        result[titles.conn_hit_start.format(index=n)] = 1 if values[hit_start + i] != 0 else 0
-        result[titles.nuc_hit_start.format(index=n)] = nucleotide[hit_start + i]
+        conn = 1 if values[hit_start + i] != 0 else 0
+        result[titles.conn_hit_start.format(index=n)] = conn
+        composition = nucleotide[hit_start + i]
+        if(conn == 1):
+            composition +=  nucleotide[values[hit_start + i]-1]
+        elif((hit_start + i + 1) in miss_index_to_nuc):
+            composition +=  nucleotide[miss_index_to_nuc[hit_start + i + 1] - 1]
+        else: 
+            composition = ""        
+        result[titles.nuc_hit_start.format(index=n)] = composition
 
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
-        result[titles.conn_hit_end.format(index=n)] = 1 if values[(hit_end-1) + i] != 0 else 0
-        result[titles.nuc_hit_end.format(index=n)] = nucleotide[(hit_end-1) + i]
+        conn = 1 if values[(hit_end-1) + i] != 0 else 0
+        result[titles.conn_hit_end.format(index=n)] = conn
+        composition = nucleotide[(hit_end-1) + i]
+        if(conn == 1):
+            composition +=  nucleotide[values[(hit_end-1) + i]-1]
+        elif(((hit_end-1) + i + 1) in miss_index_to_nuc):
+            composition +=  nucleotide[miss_index_to_nuc[(hit_end-1) + i + 1] - 1]
+        else: 
+            composition = ""        
+        result[titles.nuc_hit_end.format(index=n)] = composition
+
+
+    for i in range(1,13): # [2,13]
+        result[titles.seed_conn.format(index=(i+1))] = 1 if values[hit_start + i] != 0 else 0
     return pd.Series(result)
