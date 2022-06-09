@@ -911,6 +911,7 @@ server_url = "http://jupyter.sysmanager.ir/tree/plant_microRNA_prediction"
 def get_row(tag, path, extra, acceptable_terminal_structures = 5, MCMA=2, effective_bulge_size_in_Hit_vicinity_regions=4,            
 effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAFold"):
     result = {}    
+    miss_index_to_nuc = None
     ct = reformatCT(path)
     result[titles.seq_name] = tag
     try:
