@@ -561,7 +561,7 @@ def get_mismatch(domain, values, MCMA, hit_start, hit_end, mir_type): #MCMA: max
         else:            
             current = values[d]
             if(current > last):
-                return ["Increment series error", None, None, None, None]
+                return ["Increment series error", None, None, None, None, None]
             elif(current < last and zero_counter > 0):                
                 if(last - current - 1 == zero_counter and zero_counter <= MCMA):
                     mismatch_counter += 1
