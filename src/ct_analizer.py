@@ -1180,6 +1180,8 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         else:
             result[titles.msg] = "immediate branching"
     # for 5p
+    if(miss_index_to_nuc is None):
+        miss_index_to_nuc = {}
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
         conn = 1 if values[hit_start + i] != 0 else 0
         result[titles.conn_hit_start.format(index=n)] = conn
