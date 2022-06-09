@@ -1188,9 +1188,9 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         result[titles.conn_hit_start.format(index=n)] = conn
         composition = nucleotide[hit_start + i]
         if(conn == 1):
-            composition +=  nucleotide[values[hit_start + i]-1]
+            composition += "/" + nucleotide[values[hit_start + i]-1]
         elif((hit_start + i + 1) in miss_index_to_nuc):
-            composition +=  nucleotide[miss_index_to_nuc[hit_start + i + 1] - 1]
+            composition += "/" + nucleotide[miss_index_to_nuc[hit_start + i + 1] - 1]
         else: 
             composition = ""        
         result[titles.nuc_hit_start.format(index=n)] = composition
@@ -1200,9 +1200,9 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
         result[titles.conn_hit_end.format(index=n)] = conn
         composition = nucleotide[(hit_end-1) + i]
         if(conn == 1):
-            composition +=  nucleotide[values[(hit_end-1) + i]-1]
+            composition +=  "/" +  nucleotide[values[(hit_end-1) + i]-1]
         elif(((hit_end-1) + i + 1) in miss_index_to_nuc):
-            composition +=  nucleotide[miss_index_to_nuc[(hit_end-1) + i + 1] - 1]
+            composition +=  "/" + nucleotide[miss_index_to_nuc[(hit_end-1) + i + 1] - 1]
         else: 
             composition = ""        
         result[titles.nuc_hit_end.format(index=n)] = composition
