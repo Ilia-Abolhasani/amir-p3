@@ -4,3 +4,4 @@ Trash/
 src/__pycache__/
 Experiment/
 miRBase_driven_data/
+.vscode/

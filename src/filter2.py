@@ -121,21 +121,6 @@ def _loopHSBL_SSBL_check(row, limit):
     return True
 
 
-def convert(row):
-    row[titles.dg] = float(row[titles.dg])
-    row[titles.n_term_struc] = float(row[titles.n_term_struc])
-    row[titles.num_of_lnk_res] = float(row[titles.num_of_lnk_res])
-    row[titles.boi_gc] = float(row[titles.boi_gc])
-    if row[titles.pre_mfei] == "-":
-        row[titles.pre_mfei] = 10*10
-    row[titles.pre_mfei] = float(row[titles.pre_mfei])
-    for item in ['mismatch type', 'mismatch size', 'mismatch start', 'mismatch end',
-                 'bulge type', 'bulge size', 'bulge start', 'bulge end', "bulge strand",
-                 'internal type', 'internal loop total size', 'internal start', 'internal end', 'internal loop HSBL', 'internal loop SSBL']:
-        row[item] = eval(row[item])
-    return row
-
-
 def filter2_run(inp, config):
     level2 = inp
     level2 = level2[level2[titles.dg] >= config.delta_g_min]
@@ -240,6 +225,21 @@ def filter2_run(inp, config):
     if config.border_line_structure_allowance == "1 END ONLY":
         level2 = level2[border_proximal | border_distal]
     return level2
+
+
+def convert(row):
+    row[titles.dg] = float(row[titles.dg])
+    row[titles.n_term_struc] = float(row[titles.n_term_struc])
+    row[titles.num_of_lnk_res] = float(row[titles.num_of_lnk_res])
+    row[titles.boi_gc] = float(row[titles.boi_gc])
+    if row[titles.pre_mfei] == "-":
+        row[titles.pre_mfei] = 10*10
+    row[titles.pre_mfei] = float(row[titles.pre_mfei])
+    for item in ['mismatch type', 'mismatch size', 'mismatch start', 'mismatch end',
+                 'bulge type', 'bulge size', 'bulge start', 'bulge end', "bulge strand",
+                 'internal type', 'internal loop total size', 'internal start', 'internal end', 'internal loop HSBL', 'internal loop SSBL']:
+        row[item] = eval(row[item])
+    return row
 
 
 #BORDER_LINE_STRUCTURE_ALLOWANCE = "1 END ONLY"  # "NOT ACCEPTED"   "1 END ONLY" "BOTH END"
