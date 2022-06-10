@@ -5,7 +5,7 @@ import pandas as pd
 import multiprocessing as mp
 from numpy.random import randint, rand
 from sklearn.preprocessing import OneHotEncoder
-#from keras.utils import np_utils
+from keras.utils import np_utils
 
 
 def reverse_complement(dna):
@@ -316,7 +316,7 @@ def preprocessing(df):
 def get_target(df, reference):
     Y = df['hit seq'].isin(reference['data'])
     Y = Y.apply(lambda x: 1 if x else 0)
-#    Y = np_utils.to_categorical(Y, 2)
+    Y = np_utils.to_categorical(Y, 2)
     Y = Y.astype("float32")
     return Y
 
