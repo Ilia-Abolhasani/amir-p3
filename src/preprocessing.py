@@ -44,22 +44,32 @@ def nuc_one_hot(n):
     return pd.Series(out)
 
 
-groups = [['A/A', 'G/A', 'A/G', 'G/G'],
-          ['C/C', 'T/T',  'T/C', 'C/T'],
-          ['A/C', 'C/A'],
-          ['T/A', 'A/T'],
-          ['G/C', 'C/G'],
-          ['G/T', 'T/G'],
-          ['-']]
+# groups = [['A/A', 'G/A', 'A/G', 'G/G'],
+#           ['C/C', 'T/T',  'T/C', 'C/T'],
+#           ['A/C', 'C/A'],
+#           ['T/A', 'A/T'],
+#           ['G/C', 'C/G'],
+#           ['G/T', 'T/G'],
+#           ['-']]
 
           
-def com_one_hot(n):        
-    out = np.zeros(len(groups))
+# def com_one_hot(n):            
+#     out = np.zeros(len(groups))
+#     n = n.upper()        
+#     for i in range(len(groups)):
+#         if n in groups[i]:
+#             out[i] = 1
+#     return pd.Series(out)
+
+def com_one_hot(n):      
+    if(n == "-"):
+        n = "-/-"
     n = n.upper()        
-    for i in range(len(groups)):
-        if n in groups[i]:
-            out[i] = 1
-    return pd.Series(out)
+    out1 = nuc_one_hot(n[0]) 
+    out1.index = [ "1" + col for col in out1.index]
+    out2 = nuc_one_hot(n[2])         
+    out2.index = [ "2" + col for col in out2.index]
+    return pd.concat([out1, out2])
 
 
 def sum_of_size_in_hit(row, type_str, size_str):
