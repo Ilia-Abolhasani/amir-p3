@@ -9,10 +9,17 @@ from keras.utils import np_utils
 
 
 def reverse_complement(dna):
-    dna = dna[::-1]
-    dna = dna.replace("A", "1").replace("C", "2").replace("G", "3").replace("T", "4")
-    dna = dna.replace("1", "T").replace("2", "G").replace("3", "C").replace("4", "T")
-    return dna
+    out = ""
+    for d in dna[::-1]:
+        if d == "A":
+            out += "T"
+        if d == "T":
+            out += "A"
+        if d == "C":
+            out += "G"
+        if d == "G":
+            out += "C"
+    return out
 
 k = 4
 nuc = ["A", "C", "G", "T"]
@@ -36,13 +43,6 @@ def tnf_calc(dna):
     return pd.Series(out)/counter    
 
 
-def nuc_one_hot(n):    
-    n = n.upper() 
-    out = {"A":0, "C":0, "G":0, "T":0}
-    if(n in out):
-        out[n.upper()] = 1
-    return pd.Series(out)
-
 
 # groups = [['A/A', 'G/A', 'A/G', 'G/G'],
 #           ['C/C', 'T/T',  'T/C', 'C/T'],
@@ -61,15 +61,36 @@ def nuc_one_hot(n):
 #             out[i] = 1
 #     return pd.Series(out)
 
-def com_one_hot(n):      
-    if(n == "-"):
+def nuc_one_hot(n):
+    n = n.upper()
+    out = {"A":0, "C":0, "G":0, "T":0}
+    if(n in out):
+        out[n.upper()] = 1
+    return pd.Series(out)
+
+
+def com_one_hot(n):
+    n = n.upper()
+    if n == "-":
         n = "-/-"
-    n = n.upper()        
-    out1 = nuc_one_hot(n[0]) 
-    out1.index = [ "1" + col for col in out1.index]
-    out2 = nuc_one_hot(n[2])         
-    out2.index = [ "2" + col for col in out2.index]
-    return pd.concat([out1, out2])
+    out = np.zeros(8)
+    if n[0] == "A":
+        out[0] = 1
+    if n[0] == "C":
+        out[1] = 1
+    if n[0] == "G":
+        out[2] = 1
+    if n[0] == "T":
+        out[3] = 1
+    if n[2] == "A":
+        out[4] = 1
+    if n[2] == "C":
+        out[5] = 1
+    if n[2] == "G":
+        out[6] = 1
+    if n[2] == "T":
+        out[7] = 1
+    return pd.Series(out)
 
 
 def sum_of_size_in_hit(row, type_str, size_str):
@@ -172,6 +193,7 @@ def get_sum_in_region(row, type_str, size_str, region):
 
 def preprocessing(df):        
     result = df.copy()
+    result = result.reset_index(drop=True)
     cols = ['mismatch type', 'mismatch size']
     sum_missmatch = result[cols].apply(lambda row: sum_of_size_in_hit(row, 'mismatch type', 'mismatch size'), axis=1)
 
@@ -260,7 +282,6 @@ def preprocessing(df):
         'TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS',
         'MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP',
         ]
-
     for region in ["loop distal", "hit region", "distal border line", "loop proximal", "proximal border line"]:
         _col = ["mismatch type", "mismatch size"]
         result[f'max mismatch in {region}'] = result[_col].apply(lambda row: get_max_in_region(row, "mismatch type", "mismatch size", region), axis=1)
@@ -283,9 +304,8 @@ def preprocessing(df):
         cols.append(f'number loop in {region}')        
         result[f'sum loop in {region}'] = result[_col].apply(lambda row: get_sum_in_region(row, "internal type", "internal loop total size", region), axis=1)
         cols.append(f'sum loop in {region}')
-        
-    X = result[cols]    
-
+    mirs = result[['mir type']]
+    X = result[cols]
     # replace inf with max
     for c in X.columns:
         m = X[X[c] != np.inf][c].max()
@@ -293,33 +313,36 @@ def preprocessing(df):
     # standardization    
     mu = X.mean()
     std = X.std()
-    X = (X - mu) / std    
+    X = (X - mu) / std
     # mir type
     encoder = OneHotEncoder(handle_unknown='ignore')
-    encoder_df = pd.DataFrame(encoder.fit_transform(result[['mir type']]).toarray())
+    encoder_df = pd.DataFrame(encoder.fit_transform(mirs).toarray())
     X = X.join(encoder_df)
-    # TNF    
+    # TNF
     _tnf = pd.DataFrame(df['hit seq'].apply(lambda x: tnf_calc(x)))
-    X = X.join(_tnf)
+    X = X.join(_tnf).reset_index(drop=True)
     # start end nucleotide
+    nuc_list = []
     for c in ["-3", "-2", "-1", "", "+1", "+2"]:
         col_name = f"hit start{c} composition"
-        _nuc = pd.DataFrame(df[col_name].apply(lambda x: com_one_hot(x)))
+        _nuc = pd.DataFrame(result[col_name].apply(lambda x: com_one_hot(x))).reset_index(drop=True)
         _nuc.columns = [f"start_{c}_{i}" for i in _nuc.columns]
-        X = X.join(_nuc)
-        colname = f"hit end{c} composition"
-        _nuc = pd.DataFrame(df[col_name].apply(lambda x: com_one_hot(x)))
-        _nuc.columns = [f"end_{c}_{i}" for i in _nuc.columns ]
-        X = X.join(_nuc)    
+        nuc_list.append(_nuc)
+        col_name = f"hit end{c} composition"
+        _nuc = pd.DataFrame(result[col_name].apply(lambda x: com_one_hot(x))).reset_index(drop=True)
+        _nuc.columns = [f"end_{c}_{i}" for i in _nuc.columns]
+        nuc_list.append(_nuc)
+
+    X = pd.concat([X, *nuc_list], axis=1)
     # connectivity
     cols = []
-    for c in  ["-3", "-2", "-1", "", "+1", "+2"]:
+    for c in ["-3", "-2", "-1", "", "+1", "+2"]:
         cols.append(f"connectivity hit start{c}")
         cols.append(f"connectivity hit end{c}")
     #for c in range(2,13):
     #    cols.append(f"seed connectivity{c}")
     X = X.join(result[cols])    
-    X = X.astype("float32")    
+    X = X.astype("float32")
     return X
 
 
@@ -329,4 +352,3 @@ def get_target(df, reference):
     Y = np_utils.to_categorical(Y, 2)
     Y = Y.astype("float32")
     return Y
-
