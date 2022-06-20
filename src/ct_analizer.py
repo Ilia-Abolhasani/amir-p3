@@ -1184,30 +1184,37 @@ effective_internal_loop_size_in_Hit_vicinity_regions=5, energy_calc_method="UNAF
     if(miss_index_to_nuc is None):
         miss_index_to_nuc = {}
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
-        conn = 1 if values[hit_start + i] != 0 else 0
-        result[titles.conn_hit_start.format(index=n)] = conn
-        composition = nucleotide[hit_start + i]
-        if(conn == 1):
-            composition += "/" + nucleotide[values[hit_start + i]-1]
-        elif((hit_start + i + 1) in miss_index_to_nuc):
-            composition += "/" + nucleotide[miss_index_to_nuc[hit_start + i + 1] - 1]
-        else: 
-            composition = ""        
-        result[titles.nuc_hit_start.format(index=n)] = composition
+        if(hit_start + i >= 0):
+            conn = 1 if values[hit_start + i] != 0 else 0
+            result[titles.conn_hit_start.format(index=n)] = conn
+            composition = nucleotide[hit_start + i]
+            if(conn == 1):
+                composition += "/" + nucleotide[values[hit_start + i]-1]
+            elif((hit_start + i + 1) in miss_index_to_nuc):
+                composition += "/" + nucleotide[miss_index_to_nuc[hit_start + i + 1] - 1]
+            else: 
+                composition += "/-"        
+            result[titles.nuc_hit_start.format(index=n)] = composition
+        else:
+            result[titles.conn_hit_start.format(index=n)] = 0
+            result[titles.nuc_hit_start.format(index=n)] = "-/-"
 
     for i, n in [[-3, "-3"], [-2, "-2"], [-1, "-1"], [0, ""], [1, "+1"], [2, "+2"]]:
-        conn = 1 if values[(hit_end-1) + i] != 0 else 0
-        result[titles.conn_hit_end.format(index=n)] = conn
-        composition = nucleotide[(hit_end-1) + i]
-        if(conn == 1):
-            composition +=  "/" +  nucleotide[values[(hit_end-1) + i]-1]
-        elif(((hit_end-1) + i + 1) in miss_index_to_nuc):
-            composition +=  "/" + nucleotide[miss_index_to_nuc[(hit_end-1) + i + 1] - 1]
-        else: 
-            composition = ""        
-        result[titles.nuc_hit_end.format(index=n)] = composition
-
-
+        if((hit_end-1) + i < len(values)):
+            conn = 1 if values[(hit_end-1) + i] != 0 else 0
+            result[titles.conn_hit_end.format(index=n)] = conn
+            composition = nucleotide[(hit_end-1) + i]
+            if(conn == 1):
+                composition +=  "/" +  nucleotide[values[(hit_end-1) + i]-1]
+            elif(((hit_end-1) + i + 1) in miss_index_to_nuc):
+                composition +=  "/" + nucleotide[miss_index_to_nuc[(hit_end-1) + i + 1] - 1]
+            else: 
+                composition += "/-"
+            result[titles.nuc_hit_end.format(index=n)] = composition
+        else:
+            result[titles.conn_hit_end.format(index=n)] = 0
+            result[titles.nuc_hit_end.format(index=n)] = "-/-"
+         
     for i in range(1,13): # [2,13]
         result[titles.seed_conn.format(index=(i+1))] = 1 if values[hit_start + i] != 0 else 0
     return pd.Series(result)
