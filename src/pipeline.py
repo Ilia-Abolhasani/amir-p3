@@ -1,13 +1,10 @@
 #!/usr/bin/env python
-
 import os
 import sys
 import json
 import time
 import glob
 import math
-import hashlib
-import requests
 import numpy as np
 import pandas as pd
 from tqdm.contrib.concurrent import process_map
@@ -19,11 +16,6 @@ import urllib.parse
 from subprocess import Popen, PIPE, STDOUT
 import networkx
 from networkx.algorithms.clique import find_cliques as maximal_cliques
-from ast import literal_eval
-if sys.version_info[0] < 3: 
-    from StringIO import StringIO
-else:
-    from io import StringIO
 
 sys.path.append("./src/")
 from ct_analizer import get_row
@@ -839,4 +831,3 @@ get_ipython().system('blastx -query ./input_blastx.txt         -db ./NR/nr_datab
 blx = pd.read_csv('./Temp/BlastX/blastx', sep='\t', header=None)
 blx.columns = 'qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids'.split(' ')
 coding_seq = blx['qseqid'].unique()
-
