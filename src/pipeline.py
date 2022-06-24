@@ -37,6 +37,14 @@ experiment = "A.thaliana"
 input_genome_name = "GCF_000001735.4_TAIR10.1_genomic.fna"
 experiment_dir = "./Experiment"
 mirbase_dir = './miRBase'
+nonconformity = 3
+flanking_value = 200
+seed_start = 2
+seed_end = 13
+hit_threshold = 0.8
+precursor_threshold = 0.8
+boi_threshold = 0.8
+
 
 input_genome_path = f'{experiment_dir}/{experiment}/{input_genome_name}'
 temp_path = f"{experiment_dir}/{experiment}/Temp"
@@ -193,9 +201,8 @@ def blastn_adjust(row):
 df_blastn = df_blastn.apply(lambda row: blastn_adjust(row), axis=1)
 
 
-threshold = 3
 df_blastn['Nonconformity'] = df_blastn['qlen'] - (abs(df_blastn['qend'] - df_blastn['qstart']) + 1) + df_blastn['gaps'] + df_blastn['mismatch']
-df_blastn = df_blastn[df_blastn['Nonconformity'] <= threshold]
+df_blastn = df_blastn[df_blastn['Nonconformity'] <= nonconformity]
 print(df_blastn.shape)
 df_blastn.head(2)
 
@@ -208,7 +215,6 @@ print(df_blastn.shape)
 
 
 # # Result of the blastn to bed file
-flanking_value = 200
 df = df_blastn[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand','slen']]
 df['ones'] = 1
 
@@ -715,7 +721,7 @@ def same2cluster(same_dict, threshold=0.8):
 # hit jaccard similarity
 
 
-hit_threshold = 0.8
+
 same_strand_hit = {}
 
 def same_strand(row):    
@@ -740,7 +746,6 @@ result['hit cluster number'] = result[rcols_hit].apply(lambda row: _f(row),axis=
 
 
 rcols_boi = ['boi seq', 'boi name', 'boi dotbracket']
-boi_threshold = 0.8
 same_strand_boi = {}
 
 def same_strand(row):    
@@ -778,7 +783,6 @@ def _f(row):
 result['boi cluster number'] = result[rcols_boi].apply(lambda row: _f(row),axis=1)
 
 
-precursor_threshold = 0.8
 same_strand_precursor = {}
 rcols_pre = ['precursor seq', 'precursor name', 'precursor dotbracket']
 
@@ -822,9 +826,6 @@ for i in range(0, hit_unique.shape[0]):
     hit2cluster[hit_unique[i]] = str(i + 1).zfill(4)
 result['identical hit cluster'] = result['hit seq'].apply(lambda hit: hit2cluster[hit])
 
-
-seed_start = 2
-seed_end = 13
 result['seed region'] = result['hit seq'].apply(lambda hit: hit[seed_start-1:seed_end])
 
 
