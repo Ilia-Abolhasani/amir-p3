@@ -1,23 +1,22 @@
 #!/usr/bin/env python
 
+import os
+import sys
 import json
 import time
-from subprocess import Popen, PIPE, STDOUT
+import glob
 import math
-import numpy as np
-import pandas as pd
 import hashlib
 import requests
-import os, sys, subprocess
+import numpy as np
+import pandas as pd
 from tqdm.contrib.concurrent import process_map
 from tqdm.notebook import tqdm
 tqdm.pandas()
 import multiprocessing as mp
 import shutil
 import urllib.parse
-import glob
-import os
-import sys
+from subprocess import Popen, PIPE, STDOUT
 import networkx
 from networkx.algorithms.clique import find_cliques as maximal_cliques
 from ast import literal_eval
@@ -25,33 +24,30 @@ if sys.version_info[0] < 3:
     from StringIO import StringIO
 else:
     from io import StringIO
+
 sys.path.append("./src/")
 from ct_analizer import get_row
 from filter1 import filter1_run
 from filter2 import filter2
+from utils import *
 
 
+## config
 experiment = "A.thaliana"
 input_genome_name = "GCF_000001735.4_TAIR10.1_genomic.fna"
-
-
 experiment_dir = "./Experiment"
-
+mirbase_dir = './miRBase'
 
 input_genome_path = f'{experiment_dir}/{experiment}/{input_genome_name}'
-
 temp_path = f"{experiment_dir}/{experiment}/Temp"
 result_path = f"{experiment_dir}/{experiment}/Result"
-
+current_path = os.getcwd()
 
 if(not os.path.exists(temp_path)):
     os.mkdir(temp_path)
     
 if(not os.path.exists(result_path)):
     os.mkdir(result_path)
-
-
-current_path = os.getcwd()
 
 
 def bracket_row(row):    
@@ -63,151 +59,24 @@ def bracket_row(row):
     return row
 
 
-def adjust(text,n=7):
-    text = str(text)    
-    return " " * (n - len(text)) + text
-
-
-def bracket_to_ct(tag, data, bracket, deltaG, negative_deltaG=True):    
-    deltaG = deltaG.replace('(','').replace(')','')
-    deltaG = float(deltaG)
-    if(deltaG > 0 and negative_deltaG ): # negetive?!
-        deltaG = -1 * deltaG
-    stack = []
-    index = np.zeros((len(bracket)), dtype = int)
-    values = np.zeros((len(bracket)), dtype = int)
-    for i in range(len(bracket)):
-        index[i] = i + 1
-        if(bracket[i] == '.'):
-            values[i] = 0
-        elif(bracket[i] == '('):
-            stack.append(i)
-        elif(bracket[i] == ')'):
-            if(len(stack) == 0 ):
-                print('structure error!')
-            values[stack[-1]] = i + 1
-            values[i]  = stack[-1] + 1
-            stack.pop()
-        else:
-            print('structure error!')
-    if(len(stack) != 0 ):
-        print('structure error!')
-    # body    
-    ct = f"{adjust(len(data),6)} dG ={adjust(deltaG,10)} {tag}\n"   
-    for i in range(len(bracket)):
-        ct += f"{adjust(index[i],6)} {data[i]} {adjust(i,6)} {adjust((i+2)%(len(data)+1),6)} {adjust(values[i],6)} {adjust(index[i],7)}\n"
-    return ct
-
-
-def fasta_to_df(path):
-    with open(path, 'r') as file:
-        text = file.read()
-    lines = [line for line in text.split('\n') if len(line) > 0]
-    s = ''
-    tags = []
-    data = []
-    for l in lines:
-        if(l[0]=='>'):
-            tags.append(l)        
-            data.append(s)
-            s = ''
-        else:
-            s += l    
-    data.append(s)
-    df = pd.DataFrame(
-            {
-                'tag': tags,
-                'data': data[1:]
-            })
-    df['tag'] = df['tag'].apply(lambda x: x[1:])    
-    return df
-
-
-def df_to_fasta(df, path):
-    lines = []
-    df.apply(lambda row: lines.append(f">{row['tag']}\n{row['data']}\n"),axis=1)
-    with open(path,'w') as file:
-        file.write(''.join(lines))
-
-
-def reformat(path):
-    return path.replace('(','_').replace(')','_').replace('.','').replace(':','_')
-
-
-def reformatCT(path):
-    with open(path, 'r') as file:
-        text = file.read()
-    text = [l for l in text.split('\n') if len(l) > 0 ] # remove blank lines
-    text = '\n'.join(text)
-    text = text.replace("\t"," ")
-    while("  " in text):
-        text = text.replace("  ", " ")
-    lines = [l for l in text.split('\n')]
-    for i in range(len(lines)):
-        if(lines[i][0] == " "):
-            lines[i] = lines[i][1:]
-        if(lines[i][-1] == " "):
-            lines[i] = lines[i][:-1]
-    text = '\n'.join(lines)
-    return text
-
-
-def get_ct_data(ct):
-    ct = "\n".join(ct.split('\n')[1:])
-    df = pd.read_csv(StringIO(ct), sep=" ", header=None)               
-    nucleotide = df.iloc[:,1]
-    index = df.iloc[:,5]
-    values = df.iloc[:,4]
-    return [nucleotide, index, values]
-
-
-def ct2dot_bracket(path):
-    [nucleotide, index, values] = get_ct_data(reformatCT(path))
-    text = ''.join(nucleotide) + "\n"
-    watch = []
-    for i, v in zip(index,values):
-        if(v == 0):
-            text += '.'
-        else:
-            if( v not in watch):
-                text += '('
-                watch.append(i)
-            if( v in watch):
-                text += ')'
-    return text
-
-
-def is_nested(index, values):
-    max_value = max(index) + 10 # inf
-    for i, v in zip(index, values):
-        if(v < max_value and v != 0):
-            max_value  = v
-        if(i >= max_value):
-            max_value = max(index) + 10 # inf
-        if(v > max_value):
-            return False               
-    return True
-
-
-directory = './miRBase'
 base = "https://www.mirbase.org/ftp/CURRENT"        
 
 
-get_ipython().system('rm -r {directory}')
-get_ipython().system('mkdir -p {directory}')
+get_ipython().system('rm -r {mirbase_dir}')
+get_ipython().system('mkdir -p {mirbase_dir}')
 
-get_ipython().system('wget {base}/aliases.txt.gz -P ./{directory}/       ; gzip -d ./{directory}/aliases.txt.gz ')
-get_ipython().system('wget {base}/hairpin.fa.gz -P ./{directory}/           ; gzip -d ./{directory}/hairpin.fa.gz ')
-get_ipython().system('wget {base}/hairpin_high_conf.fa.gz -P ./{directory}/ ; gzip -d ./{directory}/hairpin_high_conf.fa.gz ')
-get_ipython().system('wget {base}/mature.fa.gz -P ./{directory}/            ; gzip -d ./{directory}/mature.fa.gz ')
-get_ipython().system('wget {base}/mature_high_conf.fa.gz -P ./{directory}/  ; gzip -d ./{directory}/mature_high_conf.fa.gz')
-get_ipython().system('wget {base}/miRNA.str.gz -P ./{directory}/            ; gzip -d ./{directory}/miRNA.str.gz ')
-get_ipython().system('wget {base}/miRNA.xls.gz -P ./{directory}/            ; gzip -d ./{directory}/miRNA.xls.gz ')
-get_ipython().system('wget {base}/organisms.txt.gz -P ./{directory}/        ; gzip -d ./{directory}/organisms.txt.gz')
+get_ipython().system('wget {base}/aliases.txt.gz -P {mirbase_dir}/       ; gzip -d {mirbase_dir}/aliases.txt.gz ')
+get_ipython().system('wget {base}/hairpin.fa.gz -P {mirbase_dir}/           ; gzip -d {mirbase_dir}/hairpin.fa.gz ')
+get_ipython().system('wget {base}/hairpin_high_conf.fa.gz -P {mirbase_dir}/ ; gzip -d {mirbase_dir}/hairpin_high_conf.fa.gz ')
+get_ipython().system('wget {base}/mature.fa.gz -P {mirbase_dir}/            ; gzip -d {mirbase_dir}/mature.fa.gz ')
+get_ipython().system('wget {base}/mature_high_conf.fa.gz -P {mirbase_dir}/  ; gzip -d {mirbase_dir}/mature_high_conf.fa.gz')
+get_ipython().system('wget {base}/miRNA.str.gz -P {mirbase_dir}/            ; gzip -d {mirbase_dir}/miRNA.str.gz ')
+get_ipython().system('wget {base}/miRNA.xls.gz -P {mirbase_dir}/            ; gzip -d {mirbase_dir}/miRNA.xls.gz ')
+get_ipython().system('wget {base}/organisms.txt.gz -P {mirbase_dir}/        ; gzip -d {mirbase_dir}/organisms.txt.gz')
 
 
-mature = fasta_to_df(f'{directory}/mature.fa')
-mature_high_conf = fasta_to_df(f'{directory}/mature_high_conf.fa')
+mature = fasta_to_df(f'{mirbase_dir}/mature.fa')
+mature_high_conf = fasta_to_df(f'{mirbase_dir}/mature_high_conf.fa')
 mature['trim tag'] = mature['tag'].apply(lambda line: ' '.join(line.split(' ')[:2]))
 mature['confidence'] = mature['trim tag'].isin(mature_high_conf['tag'])
 
@@ -217,7 +86,7 @@ print(mature.shape)
 mature.head(2)
 
 
-organism = pd.read_csv(f'./{directory}/organisms.txt',sep='\t')
+organism = pd.read_csv(f'{mirbase_dir}/organisms.txt',sep='\t')
 organism.columns = [c.replace('#','') for c in organism.columns] # remove sharp from columns
 print(organism.shape)
 organism.head(2)
@@ -252,7 +121,7 @@ get_ipython().system('./Software/cdhit/cd-hit-est -i ./{temp_path_f}/mature_micr
 
 # ## reformat
 
-with open(f'./{temp_path}/NR_mature_microRNA_queries.fasta.clstr','r') as file:
+with open(f'{temp_path}/NR_mature_microRNA_queries.fasta.clstr','r') as file:
     text = file.read()
 lines = [line for line in text.split('\n') if len(line) > 0]
 cluster = []
@@ -269,32 +138,32 @@ print(seq2cluster.shape)
 seq2cluster.head(2)    
 
 
-df = fasta_to_df(f"./{temp_path}/mature_microRNA_queries.fasta")
+df = fasta_to_df(f"{temp_path}/mature_microRNA_queries.fasta")
 df['accession'] = df['tag'].apply(lambda x : x.split(' ')[0])
 seq2cluster = pd.merge(df,seq2cluster,how="inner",left_on='accession',right_on="seqid")
 seq2cluster = pd.merge(seq2cluster, mature,how="inner",left_on='tag',right_on="tag")[['cluster','seqid','tag', 'confidence']]
 print(seq2cluster.shape)
 display(seq2cluster.head(2))
-seq2cluster.to_csv(f'./{temp_path}/seq2cluster.csv',index=False)
+seq2cluster.to_csv(f'{temp_path}/seq2cluster.csv',index=False)
 
 
 # todo: sorted first by cluster then by seqid
 seq2cluster.sort_values("cluster").head(2)
 
 
-df = fasta_to_df(f"./{temp_path}/NR_mature_microRNA_queries.fasta")
+df = fasta_to_df(f"{temp_path}/NR_mature_microRNA_queries.fasta")
 df['tag'] = df['tag'].apply(lambda x : x.split(' ')[0])
 df = pd.merge(df,seq2cluster,how="inner",left_on='tag',right_on="seqid")[['cluster','data']]
 
 lines = []
 df.apply(lambda row: lines.append(f">{row['cluster']}\n{row['data']}\n"),axis=1)
 print(df.shape)
-with open(f'./{temp_path}/BLASTn_queries.fasta','w') as file:
+with open(f'{temp_path}/BLASTn_queries.fasta','w') as file:
     file.write(''.join(lines))
 
 
 # BlastN
-path = f'./{experiment_dir}/{experiment}/{input_genome_name}'
+path = f'{experiment_dir}/{experiment}/{input_genome_name}'
 get_ipython().system('makeblastdb -in {path} -dbtype nucl -out ./{temp_path_f}/blastn_database')
 
 
@@ -305,7 +174,7 @@ get_ipython().system("blastn -query ./{temp_path}/BLASTn_queries.fasta         -
 
 
 
-df_blastn = pd.read_csv(f'./{temp_path}/BLASTn_result', sep='\t',header=None)
+df_blastn = pd.read_csv(f'{temp_path}/BLASTn_result', sep='\t',header=None)
 df_blastn.columns = header.replace("  "," ").split(" ")
 print(df_blastn.shape)
 df_blastn.head(2)
@@ -334,7 +203,7 @@ df_blastn.head(2)
 # remore redundancy and hold best one base of Nonconformity value
 df_blastn = df_blastn.sort_values(["Nonconformity", "evalue"], ascending = (True, True))
 df_blastn = df_blastn.drop_duplicates(subset=['sseqid','sstart', 'qseqid', 'send','sstrand'], keep='first')
-df_blastn.to_csv(f'./{temp_path}/filtered_out_blastn.csv')
+df_blastn.to_csv(f'{temp_path}/filtered_out_blastn.csv')
 print(df_blastn.shape)
 
 
@@ -396,21 +265,21 @@ df[['tag', 'reformated_tag', 'hit_start', 'hit_end']].to_csv(f'./{temp_path}/hit
 
 
 df['location_tag'] = df.apply(lambda row: f">{row['sseqid']}|{row['sign']}|{row['sstart'] + 1}-{row['send']}|{row['hit_start']+1}-{row['hit_end']}",axis=1)
-df[['location_tag','qseqid']].to_csv(f'./{temp_path}/pipe_seprated_location_list.csv',index=False,sep='\t')
+df[['location_tag','qseqid']].to_csv(f'{temp_path}/pipe_seprated_location_list.csv',index=False,sep='\t')
 
 
-df[['sseqid','sstart','send','strand','ones', 'sign']].to_csv(f'./{temp_path}/extension_index.bed', 
+df[['sseqid','sstart','send','strand','ones', 'sign']].to_csv(f'{temp_path}/extension_index.bed', 
         index=False, header=False, sep="\t")
 
 
 # Extention 
-get_ipython().system('bedtools getfasta -fi {input_genome_path} -fo ./{temp_path}/extended_original.txt -s -bed ./{temp_path}/extension_index.bed')
+get_ipython().system('bedtools getfasta -fi {input_genome_path} -fo {temp_path}/extended_original.txt -s -bed {temp_path}/extension_index.bed')
 get_ipython().system('rm input_genome.fna.fai')
 
 
 # Convert hit region to upper case and other region to lower case
-ext = fasta_to_df(f'./{temp_path}/extended_original.txt')
-info = pd.read_csv(f'./{temp_path}/hit_index_info.csv')
+ext = fasta_to_df(f'{temp_path}/extended_original.txt')
+info = pd.read_csv(f'{temp_path}/hit_index_info.csv')
 info['tag'] = info['tag'].apply(lambda x: x[1:])
 print(info.shape)
 info.head(2)
@@ -438,7 +307,7 @@ def emphasis_hit(row):
     return ''.join(seq)
     
 ext['data'] = ext.apply(lambda row: emphasis_hit(row),axis=1)
-df_to_fasta(ext[['tag','data']],f"./{temp_path}/extended_modified.txt")
+df_to_fasta(ext[['tag','data']],f"{temp_path}/extended_modified.txt")
 
 
 # Protein coding elimination [Download nr]
@@ -448,7 +317,7 @@ get_ipython().system('./diamond makedb --in ./NR/nr -d ./Temp/diamond_output')
 
 get_ipython().system('./diamond blastx -d ./Temp/diamond_output.dmnd                   -q ./Temp/extended_modified.txt                   -o ./Temp/diamond_matches.tsv                   -p 22')
 
-dmn = pd.read_csv(f"./{temp_path}/diamond_matches.tsv", sep='\t', header=None)
+dmn = pd.read_csv(f"{temp_path}/diamond_matches.tsv", sep='\t', header=None)
 dmn.columns = 'qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'.split(' ')
 coding_seq = dmn['qseqid'].unique()
 
@@ -460,14 +329,14 @@ def clear(inp):
     return inp
 coding_seq = pd.Series(coding_seq).apply(lambda x : clear(x))
 
-ext = fasta_to_df(f'./{temp_path}/extended_modified.txt')
+ext = fasta_to_df(f'{temp_path}/extended_modified.txt')
 print(f'total:      {ext.shape[0]}')
 non_coding = ext[~ext['tag'].isin(coding_seq)]
 print(f'non_coding: {non_coding.shape[0]}')
-df_to_fasta(non_coding,f'./{temp_path}/extended_modified_non_coding.txt')
+df_to_fasta(non_coding,f'{temp_path}/extended_modified_non_coding.txt')
 coding = ext[ext['tag'].isin(coding_seq)]
 print(f'coding:     {coding.shape[0]}')
-df_to_fasta(coding,f'./{temp_path}/extended_modified_coding.txt')
+df_to_fasta(coding,f'{temp_path}/extended_modified_coding.txt')
 
 
 # RNA 2d prediction
@@ -475,7 +344,7 @@ df_to_fasta(coding,f'./{temp_path}/extended_modified_coding.txt')
 base = f"{result_path}/secondary_structure/mfold/"
 get_ipython().system('rm -r {base}')
 get_ipython().system('mkdir -p {base}')
-df = fasta_to_df(f'./{temp_path}/extended_modified_non_coding.txt')
+df = fasta_to_df(f'{temp_path}/extended_modified_non_coding.txt')
 
 for index, row in df.iterrows():    
     tag = reformat(row['tag'])
@@ -548,7 +417,7 @@ counter = 0
 base = f"./{result_path}/secondary_structure/contrafold/"
 get_ipython().system('rm -r {base}')
 get_ipython().system('mkdir -p {base}')
-df = fasta_to_df(f'./{temp_path}/extended.txt')
+df = fasta_to_df(f'{temp_path}/extended.txt')
 
 for index, row in tqdm(df.iterrows()):    
     tag = reformat(row['tag'])
@@ -596,7 +465,7 @@ if __name__ == '__main__':
 # CTAnalizer
 ss_method = "viennarna"
 base = f"{result_path}/secondary_structure/{ss_method}/"
-df = fasta_to_df(f'./{temp_path}/extended_modified_non_coding.txt')
+df = fasta_to_df(f'{temp_path}/extended_modified_non_coding.txt')
 index_list =[]
 for index, row in df.iterrows():    
     tag = reformat(row['tag'])    
@@ -673,7 +542,7 @@ def boi_selection(row):
         repeted_boi[tuple_row_boi] = value        
 
 
-get_ipython().system('rm ./{result_path}/ct_analizer.csv')
+get_ipython().system('rm {result_path}/ct_analizer.csv')
 chunksize = 1 * (10 ** 4)
 max_workers = mp.cpu_count() - 4
 num_terminal = 5 # acceptable_terminal_structures
@@ -707,11 +576,11 @@ for chunk in tqdm(arr):
     
     # cluster refs
     chunk[rcols_dg].apply(lambda row: boi_selection(row), axis=1)        
-    chunk.to_csv(f"./{result_path}/ct_analizer.csv", header=header, mode='a', index=False)    
+    chunk.to_csv(f"{result_path}/ct_analizer.csv", header=header, mode='a', index=False)    
     header = False
 
 
-get_ipython().system('rm ./{result_path}/ct_analizer_clustered.csv')
+get_ipython().system('rm {result_path}/ct_analizer_clustered.csv')
 def isKeepCluster(row):
     global repeted_boi    
     dg = row['delta G']    
@@ -746,17 +615,17 @@ def makeCluster(row):
 
 
 header = True
-for chunk in tqdm(pd.read_csv(f"./{result_path}/ct_analizer.csv", chunksize=10 ** 5)):
+for chunk in tqdm(pd.read_csv(f"{result_path}/ct_analizer.csv", chunksize=10 ** 5)):
     chunk = chunk[chunk[rcols_dg].apply(lambda row:  isKeepCluster(row), axis=1)]
     chunk = chunk.apply(lambda row : makeCluster(row), axis=1)
-    chunk.to_csv(f"./{result_path}/ct_analizer_clustered.csv", mode='a', index=False)
+    chunk.to_csv(f"{result_path}/ct_analizer_clustered.csv", mode='a', index=False)
     header = False
 
 
 # Filters
-get_ipython().system('rm ./{result_path}/result_level1_filter.csv')
-filter1_run(input_file=  f"./{result_path}/ct_analizer_clustered.csv",
-            output_file= f"./{result_path}/result_level1_filter.csv")
+get_ipython().system('rm {result_path}/result_level1_filter.csv')
+filter1_run(input_file=  f"{result_path}/ct_analizer_clustered.csv",
+            output_file= f"{result_path}/result_level1_filter.csv")
 
 
 config = {'delta_g_min': -999,
@@ -791,13 +660,13 @@ config = {'delta_g_min': -999,
           'delete_if_mature_duplex_involvement_in_apical_loop': 'YES',
           'border_line_structure_allowance': 'NOT ACCEPTED'}
 
-filter2(input_file  = f"./{result_path}/result_level1_filter.csv",
-            output_file = f"./{result_path}/result_level2_filter.csv",
+filter2(input_file  = f"{result_path}/result_level1_filter.csv",
+            output_file = f"{result_path}/result_level2_filter.csv",
             config=config)
 
 
 # Cluster JSC
-result = pd.read_csv(f"./{result_path}/result_level2_filter.csv")
+result = pd.read_csv(f"{result_path}/result_level2_filter.csv")
 print(result.shape)
 result.head(2)
 
@@ -959,8 +828,8 @@ seed_end = 13
 result['seed region'] = result['hit seq'].apply(lambda hit: hit[seed_start-1:seed_end])
 
 
-result.to_csv(f"./{result_path}/result_level2_filter_clustered.csv",index=False)
-get_ipython().system('zip -r ./{result_path}/result_level2_filter_clustered.zip ./{result_path}/result_level2_filter_clustered.csv')
+result.to_csv(f"{result_path}/result_level2_filter_clustered.csv",index=False)
+get_ipython().system('zip -r {result_path}/result_level2_filter_clustered.zip {result_path}/result_level2_filter_clustered.csv')
 
 
 # BlastX
