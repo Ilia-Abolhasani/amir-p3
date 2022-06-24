@@ -1,40 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
-
-# # Config
-
-# In[1]:
-
-
-experiment = "A.indica"
-input_genome_name = "GCA_022749755.1_ASM2274975v1_genomic.fna"
-
-
-experiment_dir = "Experiment"
-
-
-# In[2]:
-
-
-input_genome_path = f'{experiment_dir}/{experiment}/{input_genome_name}'
-
-temp_path = f"{experiment_dir}/{experiment}/Temp"
-result_path = f"{experiment_dir}/{experiment}/Result"
-
-temp_path_f = temp_path.replace(" ", "\ ")
-result_path_f = result_path.replace(" ", "\ ")
-
-
-# # Common
-
-# In[3]:
-
-
-#!pip install tqdm
-
-
-# In[4]:
-
 
 import json
 import time
@@ -67,7 +31,17 @@ from filter1 import filter1_run
 from filter2 import filter2
 
 
-# In[5]:
+experiment = "A.thaliana"
+input_genome_name = "GCF_000001735.4_TAIR10.1_genomic.fna"
+
+
+experiment_dir = "./Experiment"
+
+
+input_genome_path = f'{experiment_dir}/{experiment}/{input_genome_name}'
+
+temp_path = f"{experiment_dir}/{experiment}/Temp"
+result_path = f"{experiment_dir}/{experiment}/Result"
 
 
 if(not os.path.exists(temp_path)):
@@ -77,13 +51,7 @@ if(not os.path.exists(result_path)):
     os.mkdir(result_path)
 
 
-# In[6]:
-
-
 current_path = os.getcwd()
-
-
-# In[7]:
 
 
 def bracket_row(row):    
@@ -95,15 +63,9 @@ def bracket_row(row):
     return row
 
 
-# In[8]:
-
-
 def adjust(text,n=7):
     text = str(text)    
     return " " * (n - len(text)) + text
-
-
-# In[9]:
 
 
 def bracket_to_ct(tag, data, bracket, deltaG, negative_deltaG=True):    
@@ -137,9 +99,6 @@ def bracket_to_ct(tag, data, bracket, deltaG, negative_deltaG=True):
     return ct
 
 
-# In[10]:
-
-
 def fasta_to_df(path):
     with open(path, 'r') as file:
         text = file.read()
@@ -164,9 +123,6 @@ def fasta_to_df(path):
     return df
 
 
-# In[11]:
-
-
 def df_to_fasta(df, path):
     lines = []
     df.apply(lambda row: lines.append(f">{row['tag']}\n{row['data']}\n"),axis=1)
@@ -174,14 +130,8 @@ def df_to_fasta(df, path):
         file.write(''.join(lines))
 
 
-# In[12]:
-
-
 def reformat(path):
     return path.replace('(','_').replace(')','_').replace('.','').replace(':','_')
-
-
-# In[13]:
 
 
 def reformatCT(path):
@@ -202,9 +152,6 @@ def reformatCT(path):
     return text
 
 
-# In[14]:
-
-
 def get_ct_data(ct):
     ct = "\n".join(ct.split('\n')[1:])
     df = pd.read_csv(StringIO(ct), sep=" ", header=None)               
@@ -212,9 +159,6 @@ def get_ct_data(ct):
     index = df.iloc[:,5]
     values = df.iloc[:,4]
     return [nucleotide, index, values]
-
-
-# In[15]:
 
 
 def ct2dot_bracket(path):
@@ -233,9 +177,6 @@ def ct2dot_bracket(path):
     return text
 
 
-# In[16]:
-
-
 def is_nested(index, values):
     max_value = max(index) + 10 # inf
     for i, v in zip(index, values):
@@ -248,16 +189,8 @@ def is_nested(index, values):
     return True
 
 
-# # Download data from Mirbase
-
-# In[17]:
-
-
-directory = './miRBase_driven_data'
+directory = './miRBase'
 base = "https://www.mirbase.org/ftp/CURRENT"        
-
-
-# In[18]:
 
 
 get_ipython().system('rm -r {directory}')
@@ -273,24 +206,15 @@ get_ipython().system('wget {base}/miRNA.xls.gz -P ./{directory}/            ; gz
 get_ipython().system('wget {base}/organisms.txt.gz -P ./{directory}/        ; gzip -d ./{directory}/organisms.txt.gz')
 
 
-# In[18]:
-
-
 mature = fasta_to_df(f'{directory}/mature.fa')
 mature_high_conf = fasta_to_df(f'{directory}/mature_high_conf.fa')
 mature['trim tag'] = mature['tag'].apply(lambda line: ' '.join(line.split(' ')[:2]))
 mature['confidence'] = mature['trim tag'].isin(mature_high_conf['tag'])
 
 
-# In[19]:
-
-
 mature['organism'] = mature['tag'].apply(lambda x: x[:3])
 print(mature.shape)
 mature.head(2)
-
-
-# In[20]:
 
 
 organism = pd.read_csv(f'./{directory}/organisms.txt',sep='\t')
@@ -299,15 +223,9 @@ print(organism.shape)
 organism.head(2)
 
 
-# In[21]:
-
-
 items = list(organism['tree'].unique())
 items.sort(key=len)
 items
-
-
-# In[22]:
 
 
 selectedTree = organism[organism['tree'].apply(lambda x: "Viridiplantae;" in x)]
@@ -315,13 +233,7 @@ print(selectedTree.shape)
 selectedTree.head(5)
 
 
-# In[23]:
-
-
 #selectedTree = selectedTree[selectedTree['name'] == ""]
-
-
-# In[24]:
 
 
 selected = mature[mature['organism'].isin(selectedTree['organism'])]
@@ -329,26 +241,16 @@ print(selected.shape)
 selected.head(1)
 
 
-# In[25]:
-
-
 df_to_fasta(selected,f'{temp_path}/mature_microRNA_queries.fasta')
 
 
-# # Remove redundant
-
-# ## cdhit-est
-
-# In[26]:
-
+# Remove redundant
+## cdhit-est
 
 get_ipython().system('./Software/cdhit/cd-hit-est -i ./{temp_path_f}/mature_microRNA_queries.fasta  -o ./{temp_path_f}/NR_mature_microRNA_queries.fasta     -c 1 -r 0 -G 1 -g 1 -b 30 -l 10 -aL 0 -AL 99999999 -aS 0     -AS 99999999 -s 0 -S 0')
 
 
 # ## reformat
-
-# In[27]:
-
 
 with open(f'./{temp_path}/NR_mature_microRNA_queries.fasta.clstr','r') as file:
     text = file.read()
@@ -367,9 +269,6 @@ print(seq2cluster.shape)
 seq2cluster.head(2)    
 
 
-# In[28]:
-
-
 df = fasta_to_df(f"./{temp_path}/mature_microRNA_queries.fasta")
 df['accession'] = df['tag'].apply(lambda x : x.split(' ')[0])
 seq2cluster = pd.merge(df,seq2cluster,how="inner",left_on='accession',right_on="seqid")
@@ -379,14 +278,8 @@ display(seq2cluster.head(2))
 seq2cluster.to_csv(f'./{temp_path}/seq2cluster.csv',index=False)
 
 
-# In[29]:
-
-
 # todo: sorted first by cluster then by seqid
 seq2cluster.sort_values("cluster").head(2)
-
-
-# In[30]:
 
 
 df = fasta_to_df(f"./{temp_path}/NR_mature_microRNA_queries.fasta")
@@ -400,40 +293,22 @@ with open(f'./{temp_path}/BLASTn_queries.fasta','w') as file:
     file.write(''.join(lines))
 
 
-# # BlastN
-
-# !sudo apt-get install ncbi-blast+
-# 
-
-# In[31]:
-
-
+# BlastN
 path = f'./{experiment_dir}/{experiment}/{input_genome_name}'
 get_ipython().system('makeblastdb -in {path} -dbtype nucl -out ./{temp_path_f}/blastn_database')
-
-
-# In[32]:
 
 
 header = 'qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen'
 
 
-# In[33]:
-
-
 get_ipython().system("blastn -query ./{temp_path}/BLASTn_queries.fasta         -out ./{temp_path}/BLASTn_result         -num_threads {mp.cpu_count()}         -db ./{temp_path}/blastn_database         -word_size 7         -penalty -3         -reward 2         -gapopen 5         -gapextend 2         -outfmt '6 qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen'       ")
 
-
-# In[34]:
 
 
 df_blastn = pd.read_csv(f'./{temp_path}/BLASTn_result', sep='\t',header=None)
 df_blastn.columns = header.replace("  "," ").split(" ")
 print(df_blastn.shape)
 df_blastn.head(2)
-
-
-# In[35]:
 
 
 # alignment length adjustment
@@ -449,17 +324,11 @@ def blastn_adjust(row):
 df_blastn = df_blastn.apply(lambda row: blastn_adjust(row), axis=1)
 
 
-# In[36]:
-
-
 threshold = 3
 df_blastn['Nonconformity'] = df_blastn['qlen'] - (abs(df_blastn['qend'] - df_blastn['qstart']) + 1) + df_blastn['gaps'] + df_blastn['mismatch']
 df_blastn = df_blastn[df_blastn['Nonconformity'] <= threshold]
 print(df_blastn.shape)
 df_blastn.head(2)
-
-
-# In[37]:
 
 
 # remore redundancy and hold best one base of Nonconformity value
@@ -470,16 +339,9 @@ print(df_blastn.shape)
 
 
 # # Result of the blastn to bed file
-
-# In[38]:
-
-
 flanking_value = 200
 df = df_blastn[['qseqid', 'sseqid', 'sstart', 'send', 'sstrand','slen']]
 df['ones'] = 1
-
-
-# In[39]:
 
 
 def switch(row):
@@ -491,9 +353,6 @@ def switch(row):
 df = df.apply(lambda row: switch(row), axis=1)
 
 
-# In[40]:
-
-
 def convert(inp):
     if(inp == "plus"):
         return "forward"
@@ -501,9 +360,6 @@ def convert(inp):
         return "reverse"
     raise Exception('Error, sstrand contains illegal word! only "plus" and "minus" are allowed')
 df['strand'] = df['sstrand'].apply(lambda x: convert(x))
-
-
-# In[41]:
 
 
 def convert2sign(inp):
@@ -515,52 +371,23 @@ def convert2sign(inp):
 df['sign'] = df['sstrand'].apply(lambda x: convert2sign(x))
 
 
-# In[42]:
-
 
 df['hit_length'] = df.apply(lambda row: abs(row['send'] - row['sstart']) + 1 ,axis=1)
 
 
-# ## convert sstart and send from location to index (range)
-
-# In[43]:
-
-
+# convert sstart and send from location to index (range)
 df['sstart'] = df['sstart'].apply(lambda x: x - 1)
 
-
-# In[44]:
-
-
 df['downstream_flanking'] = df['sstart'].apply(lambda x:  flanking_value if x > flanking_value else x)
-
-
-# In[45]:
-
-
 df['upstream_flanking'] = df.apply(lambda row:  flanking_value if (row['send']+flanking_value) <= row['slen'] else row['slen'] - row['send'],axis=1)
 
-
-# In[46]:
-
-
 df['hit_start'] = df.apply(lambda row: row['downstream_flanking'] if row['sign'] == "+" else row['upstream_flanking'],axis=1)
-
-
-# In[47]:
-
 
 df['hit_end'] = df.apply(lambda row: row['downstream_flanking'] + row['hit_length'] if row['sign'] == "+" else row['upstream_flanking'] + row['hit_length'],axis=1)
 
 
-# In[48]:
-
-
 df['sstart'] = df['sstart'].apply(lambda x: max(x - flanking_value, 0))
 df['send'] = df.apply(lambda row: min(row['send'] + flanking_value , row['slen']),axis=1)
-
-
-# In[49]:
 
 
 df['tag'] = df.apply(lambda row: f">{row['sseqid']}:{row['sstart']}-{row['send']}({row['sign']})",axis=1)
@@ -568,62 +395,25 @@ df['reformated_tag'] = df['tag'].apply(lambda t: reformat(t))
 df[['tag', 'reformated_tag', 'hit_start', 'hit_end']].to_csv(f'./{temp_path}/hit_index_info.csv')#, index=False)
 
 
-# In[50]:
-
-
 df['location_tag'] = df.apply(lambda row: f">{row['sseqid']}|{row['sign']}|{row['sstart'] + 1}-{row['send']}|{row['hit_start']+1}-{row['hit_end']}",axis=1)
 df[['location_tag','qseqid']].to_csv(f'./{temp_path}/pipe_seprated_location_list.csv',index=False,sep='\t')
-
-
-# In[51]:
 
 
 df[['sseqid','sstart','send','strand','ones', 'sign']].to_csv(f'./{temp_path}/extension_index.bed', 
         index=False, header=False, sep="\t")
 
 
-# # Extention
-# 
-
-# In[52]:
-
-
-# !sudo apt-get install bedtools
-
-
-# In[53]:
-
-
+# Extention 
 get_ipython().system('bedtools getfasta -fi {input_genome_path} -fo ./{temp_path}/extended_original.txt -s -bed ./{temp_path}/extension_index.bed')
 get_ipython().system('rm input_genome.fna.fai')
 
 
-# In[54]:
-
-
-# todo: remove duplicated
-'''
-df = fasta_to_df("./Temp/extended.txt")
-df = df.drop_duplicates(subset=['tag'], keep='first')
-df_to_fasta(df,"./Temp/extended.txt")
-len(df['tag'].unique())
-''';
-
-
-# # Convert hit region to upper case and other region to lower case
-
-# In[55]:
-
-
+# Convert hit region to upper case and other region to lower case
 ext = fasta_to_df(f'./{temp_path}/extended_original.txt')
 info = pd.read_csv(f'./{temp_path}/hit_index_info.csv')
 info['tag'] = info['tag'].apply(lambda x: x[1:])
 print(info.shape)
 info.head(2)
-
-
-# In[56]:
-
 
 ext = ext.sort_values(by=['tag']).reset_index()
 ext['help_tag'] = ext.apply(lambda r: r['tag'] + str(r.name),axis=1)
@@ -651,45 +441,16 @@ ext['data'] = ext.apply(lambda row: emphasis_hit(row),axis=1)
 df_to_fasta(ext[['tag','data']],f"./{temp_path}/extended_modified.txt")
 
 
-# # Protein coding elimination [Download nr]
-
-# In[ ]:
-
-
+# Protein coding elimination [Download nr]
 get_ipython().system('wget https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz')
-
-
-# # Protein coding elimination [Diamond]
-
-# In[57]:
-
-
-#!wget http://github.com/bbuchfink/diamond/releases/download/v2.0.13/diamond-linux64.tar.gz
-#!tar xzf diamond-linux64.tar.gz
-
-
-# In[ ]:
-
-
+# Protein coding elimination [Diamond]
 get_ipython().system('./diamond makedb --in ./NR/nr -d ./Temp/diamond_output')
 
-
-# In[ ]:
-
-
 get_ipython().system('./diamond blastx -d ./Temp/diamond_output.dmnd                   -q ./Temp/extended_modified.txt                   -o ./Temp/diamond_matches.tsv                   -p 22')
-
-
-# In[58]:
-
 
 dmn = pd.read_csv(f"./{temp_path}/diamond_matches.tsv", sep='\t', header=None)
 dmn.columns = 'qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore'.split(' ')
 coding_seq = dmn['qseqid'].unique()
-
-
-# In[59]:
-
 
 def clear(inp):
     if(inp[:9] == "reverse::"):
@@ -709,31 +470,9 @@ print(f'coding:     {coding.shape[0]}')
 df_to_fasta(coding,f'./{temp_path}/extended_modified_coding.txt')
 
 
-# # RNA 2d prediction
-
-# ## Mfold
-
-# In[129]:
-
-
-'''
-# installation
-!wget http://www.unafold.org/download/mfold-3.6.tar.gz
-!tar -xvf ./mfold-3.6.tar.gz; rm ./mfold-3.6.tar.gz
-%cd ./mfold-3.6
-!./configure
-!make
-!make install
-%cd ..
-!sudo apt install texlive-font-utils
-''';
-
-
-# In[62]:
-
-
-counter = 0
-base = f"./{result_path}/secondary_structure/mfold/"
+# RNA 2d prediction
+## Mfold
+base = f"{result_path}/secondary_structure/mfold/"
 get_ipython().system('rm -r {base}')
 get_ipython().system('mkdir -p {base}')
 df = fasta_to_df(f'./{temp_path}/extended_modified_non_coding.txt')
@@ -744,42 +483,17 @@ for index, row in df.iterrows():
         os.makedirs(base + tag)            
     with open(base + f"{tag}/SEQ.FASTA",'w') as file:
         file.write(f">{row['tag']}\n{row['data']}")
-    counter += 1    
-    #if(counter >= 100):
-      #  break
-
-
-# In[63]:
-
+    
 
 get_ipython().run_cell_magic('capture', '', 'remove_lock = False\ndef run_mfold(tag):\n    tag = reformat(tag)\n    %cd {base + tag}\n    !mfold  SEQ="SEQ.FASTA" T=22   \n    if(not remove_lock):\n        !find . -name "SEQ*" -not -name "*.ct" -not -name "*.pdf" -not -name "*SEQ.FASTA" -not -type d -delete\n    %cd {current_path}\n\nif __name__ == \'__main__\':        \n    pool = mp.Pool(mp.cpu_count() - 3)      \n    pool.map(run_mfold, df[\'tag\'])  ')
 
 
-# ## Mxfold2
-
-# In[ ]:
-
-
-#!wget https://github.com/keio-bioinformatics/mxfold2/releases/download/v0.1.1/mxfold2-0.1.1.tar.gz
-#!pip3 install mxfold2-0.1.1.tar.gz
-#!rm mxfold2-0.1.1.tar.gz
-
-
-# In[ ]:
-
-
+## Mxfold2
 get_ipython().system('mxfold2 predict ./extended.txt > Result/secondary_structure/mxfold2_result.txt')
-
-
-# In[ ]:
-
 
 df = fasta_to_df('./Result/secondary_structure/mxfold2_result.txt')
 df = df.apply(lambda row: bracket_row(row) , axis=1)
 df.head(2)
-
-
-# In[ ]:
 
 
 base = "./Result/secondary_structure/mxfold2/"
@@ -796,44 +510,20 @@ for index, row in df.iterrows():
         file.write(ct)    
 
 
-# ## Vienna package
-
-# In[ ]:
-
-
-#!wget https://www.tbi.univie.ac.at/RNA/download/ubuntu/ubuntu_20_04/viennarna_2.4.18-1_amd64.deb -O viennarna.deb
-#!sudo dpkg -i ./viennarna.deb
-#!sudo apt-get -f install
-#!rm viennarna.deb
-
-
-# In[ ]:
-
-
-base = "./Result/secondary_structure/viennarna/"
+## Vienna package
+base = f"{result_path}/secondary_structure/viennarna/"
 get_ipython().system('rm -r {base}')
-get_ipython().system('rm ./Result/secondary_structure/viennarna_result.txt')
+get_ipython().system('rm {result_path}/secondary_structure/viennarna_result.txt')
 get_ipython().system('mkdir -p {base}')
 
 
-# In[ ]:
+get_ipython().system('RNAfold --jobs=0 --infile {current_path}/{temp_path}/extended_modified.txt  --noPS -T 22 > {current_path}/{base}/viennarna_result.txt')
 
 
-get_ipython().run_line_magic('cd', '{base}')
-get_ipython().system('RNAfold --jobs=0 --infile ../../Temp/extended_modified.txt  --noPS -T 22 > ../viennarna_result.txt')
-get_ipython().run_line_magic('cd', '{current_path}')
-
-
-# In[ ]:
-
-
-df = fasta_to_df('./Result/secondary_structure/viennarna_result.txt')
+df = fasta_to_df(f'{result_path}/secondary_structure/viennarna/viennarna_result.txt')
 df = df.apply(lambda row: bracket_row(row) , axis=1)
 print(df.shape)
 df.head(2)
-
-
-# In[ ]:
 
 
 for index, row in df.iterrows():    
@@ -847,32 +537,13 @@ for index, row in df.iterrows():
         file.write(ct)    
 
 
-# In[ ]:
-
-
-import glob
 for file in glob.glob(f"{base}*.ps"):    
     f = file[len(base):-6] # _ss.ps 
     f = reformat(f)        
     shutil.move(file, f"{base}{f}/{f}.ps")    
 
 
-# ## ContraFold
-
-# In[ ]:
-
-
-#!wget http://contra.stanford.edu/contrafold/contrafold_v2_02.tar.gz
-#!tar -xvzf contrafold_v2_02.tar.gz && rm contrafold_v2_02.tar.gz
-#%cd contrafold/src
-#!make clean
-#!make 
-# to file must changed to be complieable # utility.hpp and optimization.c++ files
-
-
-# In[ ]:
-
-
+## ContraFold
 counter = 0
 base = f"./{result_path}/secondary_structure/contrafold/"
 get_ipython().system('rm -r {base}')
@@ -886,9 +557,6 @@ for index, row in tqdm(df.iterrows()):
     with open(base + f"{tag}/{tag}.FASTA",'w') as file:
         file.write(f">{row['tag']}\n{row['data']}")
     counter += 1        
-
-
-# In[ ]:
 
 
 def run_contrafold(tag):
@@ -925,20 +593,9 @@ if __name__ == '__main__':
     pool.map(run_contrafold, df['tag'].iloc[:10])
 
 
-# In[ ]:
-
-
-'''path = 'secondary_structure/contrafold/AMWY020333941_469-893_-_/AMWY020333941_469-893_-_.dot'
-!RNAeval  {path} -T 20 -v'''; 
-
-
-# # CTAnalizer
-
-# In[64]:
-
-
-# only select those not ran before
-base = f"./{result_path}/secondary_structure/mfold/"
+# CTAnalizer
+ss_method = "viennarna"
+base = f"{result_path}/secondary_structure/{ss_method}/"
 df = fasta_to_df(f'./{temp_path}/extended_modified_non_coding.txt')
 index_list =[]
 for index, row in df.iterrows():    
@@ -949,9 +606,6 @@ df = df.iloc[index_list,:]
 print(df.shape)
 
 
-# In[65]:
-
-
 def run(tag, path, extra):                    
     try:
         return get_row(tag, path,extra)
@@ -960,22 +614,10 @@ def run(tag, path, extra):
         return pd.Series()
         
 def get_df_by_tag(tag , extra=0):           
-    ct_files = glob.glob(f'{base}{reformat(tag)}/SEQ_*.ct')    
+    ct_files = glob.glob(f'{base}{reformat(tag)}/*.ct')    
     return pd.Series(ct_files).apply(lambda path: run(tag, path,extra))    
 
-
-# In[66]:
-
-
-d = get_df_by_tag("NC_050105.1|-|1-225|201-224", extra=0)
-#d.to_csv('Result/d.csv')#.iloc[0,:]['full seq visualization']
-
-
-# # Apply on current data
-
-# In[67]:
-
-
+# Apply on current data
 seq2cluster = pd.read_csv(f"{temp_path}/seq2cluster.csv")
 seq2cluster['tag'] = seq2cluster.groupby(['cluster'])['tag'].transform(lambda x: ','.join(x))
 seq2cluster['seqid'] = seq2cluster.groupby(['cluster'])['seqid'].transform(lambda x: ','.join(x))
@@ -989,12 +631,10 @@ data['Reference miRNA IDs and species'] = data['tag']
 data = data[['location_tag','Reference miRNA cluster', 'Reference miRNA IDs', 'Reference miRNA IDs and species','confidence']]
 
 
-# In[68]:
-
-
 rcols_ref = ['Reference miRNA cluster',
              'Reference miRNA IDs',
              'Reference miRNA IDs and species']
+
 rcols_boi = ['boi seq', 'boi name', 'boi dotbracket']
 
 rcols = [*rcols_ref,
@@ -1033,9 +673,6 @@ def boi_selection(row):
         repeted_boi[tuple_row_boi] = value        
 
 
-# In[69]:
-
-
 get_ipython().system('rm ./{result_path}/ct_analizer.csv')
 chunksize = 1 * (10 ** 4)
 max_workers = mp.cpu_count() - 4
@@ -1072,9 +709,6 @@ for chunk in tqdm(arr):
     chunk[rcols_dg].apply(lambda row: boi_selection(row), axis=1)        
     chunk.to_csv(f"./{result_path}/ct_analizer.csv", header=header, mode='a', index=False)    
     header = False
-
-
-# In[70]:
 
 
 get_ipython().system('rm ./{result_path}/ct_analizer_clustered.csv')
@@ -1119,17 +753,10 @@ for chunk in tqdm(pd.read_csv(f"./{result_path}/ct_analizer.csv", chunksize=10 *
     header = False
 
 
-# # Filters
-
-# In[71]:
-
-
+# Filters
 get_ipython().system('rm ./{result_path}/result_level1_filter.csv')
 filter1_run(input_file=  f"./{result_path}/ct_analizer_clustered.csv",
             output_file= f"./{result_path}/result_level1_filter.csv")
-
-
-# In[107]:
 
 
 config = {'delta_g_min': -999,
@@ -1169,17 +796,10 @@ filter2(input_file  = f"./{result_path}/result_level1_filter.csv",
             config=config)
 
 
-# # Cluster JSC
-
-# In[20]:
-
-
+# Cluster JSC
 result = pd.read_csv(f"./{result_path}/result_level2_filter.csv")
 print(result.shape)
 result.head(2)
-
-
-# In[21]:
 
 
 def jaccard(A, B):
@@ -1192,9 +812,6 @@ def jaccard(A, B):
     intersection = len(s1.intersection(s2))
     union = (len(s1) + len(s2)) - intersection
     return float(intersection) / union
-
-
-# In[22]:
 
 
 def same2cluster(same_dict, threshold=0.8):        
@@ -1226,9 +843,7 @@ def same2cluster(same_dict, threshold=0.8):
     return same_dict 
 
 
-# ## hit jaccard similarity
-
-# In[23]:
+# hit jaccard similarity
 
 
 hit_threshold = 0.8
@@ -1253,9 +868,6 @@ def _f(row):
     key = f"{row['chromosome']}{row['sign']}"
     return same_strand_hit[f'{key}'][row['hit position on chromosome']]
 result['hit cluster number'] = result[rcols_hit].apply(lambda row: _f(row),axis=1)
-
-
-# In[24]:
 
 
 rcols_boi = ['boi seq', 'boi name', 'boi dotbracket']
@@ -1297,9 +909,6 @@ def _f(row):
 result['boi cluster number'] = result[rcols_boi].apply(lambda row: _f(row),axis=1)
 
 
-# In[25]:
-
-
 precursor_threshold = 0.8
 same_strand_precursor = {}
 rcols_pre = ['precursor seq', 'precursor name', 'precursor dotbracket']
@@ -1338,9 +947,6 @@ def _f(row):
 result['precursor cluster number'] = result[rcols_pre].apply(lambda row: _f(row),axis=1)
 
 
-# In[26]:
-
-
 hit2cluster = {}
 hit_unique = result['hit seq'].unique()
 for i in range(0, hit_unique.shape[0]):
@@ -1348,66 +954,19 @@ for i in range(0, hit_unique.shape[0]):
 result['identical hit cluster'] = result['hit seq'].apply(lambda hit: hit2cluster[hit])
 
 
-# In[27]:
-
-
 seed_start = 2
 seed_end = 13
 result['seed region'] = result['hit seq'].apply(lambda hit: hit[seed_start-1:seed_end])
-
-
-# In[28]:
 
 
 result.to_csv(f"./{result_path}/result_level2_filter_clustered.csv",index=False)
 get_ipython().system('zip -r ./{result_path}/result_level2_filter_clustered.zip ./{result_path}/result_level2_filter_clustered.csv')
 
 
-# # BlastX
-
-# In[ ]:
-
-
+# BlastX
 get_ipython().system('makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database')
-
-#!head -n 100 ./Temp/extended_modified.txt > ./input_blastx.txt
-
 get_ipython().system('blastx -query ./input_blastx.txt         -db ./NR/nr_database         -out ./Temp/BlastX/blastx         -num_threads 20         -evalue 1e-3         -outfmt "6 qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids"')
-
 blx = pd.read_csv('./Temp/BlastX/blastx', sep='\t', header=None)
 blx.columns = 'qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids'.split(' ')
 coding_seq = blx['qseqid'].unique()
-
-
-# # psRNATarget
-
-# In[153]:
-
-
-url = "https://www.zhaolab.org/psRNATarget/analysis"
-
-payload='allowbulge=yes&curschema=s2&cutpos1=10&cutpos2=11&expect=5&function=3&gapextp=0.5&gapstartp=2&gup=0.5&hspsize=19&maxnummismatchinseed=2&misp=1&seedfactor=1.5&seedpos1=2&seedpos2=13&srna=&srna_content=%3Eath-miR156a%0D%0AUGACAGAAGAGAGUGAGCAC%0D%0A%3Eath-miR157a%0D%0AUUGACAGAAGAUAGAGAGCAC%0D%0A%3Eath-miR158a%0D%0AUCCCAAAUGUAGACAAAGCA%0D%0A%3Eath-miR398a%0D%0AUGUGUUCUCAGGUCACCCCUU%0D%0A%3Eath-miR398b%0D%0AUGUGUUCUCAGGUCACCCCUG%0D%0A%3Eath-miR398c%0D%0AUGUGUUCUCAGGUCACCCCUG%0D%0A%3Eath-miR834%0D%0AUGGUAGCAGUAGCGGUGGUAA%0D%0A%3Eath-miR390a%0D%0AAAGCUCAGGAGGGAUAGCGCC%0D%0A%3Eath-miR390b%0D%0AAAGCUCAGGAGGGAUAGCGCC&srna_uploaded=&target=&target_content=%3EAT1G27360.1%0D%0AAAGGTATCTATTTGCCTAGCCAGAGTTATATATAGGATTGATTGTCTAGTCTTTTCTTATATGATTTTTGTTCTCATTTACTAATCAAAGTTCTGCAAACTTGTAGTTGTTGTAGGATTTGTTGCTCTGGCTCTGGTGGTAGGTCTATGAAATCAACCCATATCGTGAATGGACTGCAACATGGTATCTTCGTCCCAGTGGGATTGGGAGCATTTGATCATGTCCAATCCGTCAAGGACTGAAGATGACAGCAAACAGCTACCTACTGAGTGGGAAATTGAAAAAGGTGAAGGAATTGAATCTATAGTTCCACATTTCTCAGGCCTTGAGAGAGTCAGTAGTGGCTCTGCCACCAGCTTCTGGCACACTGCTGTATCGAAAAGCTCACAGTCGACCTCTATCAACTCATCATCTCCCGAAGCCAAACGATGCAAGCTTGCATCAGAAAGTTCCCCTGGAGATTCTTGCAGCAACATAGACTTTGTCCAGGTGAAGGCTCCCACAGCTCTCGAGGTATCCGTTGCCTCAGCTGAATCAGATCTTTGTTTAAAACTAGGAAAGCGGACATACTCTGAAGAATACTGGGGTAGAAACAATAATGAAATTTCAGCGGTTTCTATGAAGTTGTTAACTCCATCTGTTGTCGCTGGGAAATCCAAATTGTGTGGTCAGAGCATGCCAGTCCCGCGTTGCCAAATTGATGGCTGTGAACTGGATCTCTCATCTGCTAAGGGTTATCATCGTAAGCACAAAGTCTGCGAAAAGCATTCAAAGTGCCCAAAAGTTAGCGTGAGTGGCCTGGAACGTCGGTTCTGCCAACAGTGTAGCAGGTTCCATGCTGTCTCTGAATTTGATGAGAAGAAACGAAGCTGCCGAAAACGTCTTTCTCATCATAATGCGAGGCGTCGTAAGCCACAAGGAGTATTTTCAATGAATCCCGAGAGGGTGTATGATCGAAGACAGCATACAAATATGTTGTGGAATGGGGTGTCCCTTAACGCGAGATCTGAAGAAATGTATGAATGGGGTAATAACACTTATGATACAAAGCCTAGACAAACGGAAAAAAGCTTTACTCTGAGCTTCCAGAGAGGTAATGGCTCTGAGGACCAGCTGGTTGCTAGTAGCAGCCGTATGTTCTCTACATCTCAAACCTCAGGTGGGTTCCCAGCAGGAAAGTCCAAGTTTCAACTTCATGGCGAAGATGTGGGAGAATACTCAGGAGTCCTCCATGAATCTCAAGATATCCACCGTGCTCTCTCTCTTCTGTCAACCTCTTCGGATCCCCTGGCCCAACCACATGTGCAGCCATTTTCTCTACTCTGTTCATATGATGTTGTACCAAAATAGATGAGTAAGTAATGTGTAATTTGTAAACCTGTTACTCAGTTGGTGGATACTTTTCCAAACCTATGATAAAAACCTCGTCCTAGATCCCGTTAAATGCCAAACTTTCGGCTACTATAACTATGTTATCGTTATCATTATCATTGTTTAACACCCT%0D%0A%3EAT1G27360.4%20%7C%20Symbols%3A%20%20%7C%20squamosa%20promoter-binding%20protein-like%2011%20(SPL11)%20%7C%20chr1%3A9501808-9503856%20FORWARD%0D%0ACTGGGTGAAACATAGAAAAGTTTCTCTTGCTCAAGTTAATGATAAAAGGGTGAGAGCAATAAACGCTGATAAGCCTTGTCTGGTCCTTGGAATTTTGAATTTTCTTTTTCTATCTTACTTATAGTATTGGTAGTTGAGGGTGTCGTCGATAAGTTGTTGTAGGATTTGTTGCTCTGGCTCTGGTGGTAGGTCTATGAAATCAACCCATATCGTGAATGGACTGCAACATGGTATCTTCGTCCCAGTGGGATTGGGAGCATTTGATCATGTCCAATCCGTCAAGGACTGAAGATGACAGCAAACAGCTACCTACTGAGTGGGAAATTGAAAAAGGTGAAGGAATTGAATCTATAGTTCCACATTTCTCAGGCCTTGAGAGAGTCAGTAGTGGCTCTGCCACCAGCTTCTGGCACACTGCTGTATCGAAAAGCTCACAGTCGACCTCTATCAACTCATCATCTCCCGAAGCCAAACGATGCAAGCTTGCATCAGAAAGTTCCCCTGGAGATTCTTGCAGCAACATAGACTTTGTCCAGGTGAAGGCTCCCACAGCTCTCGAGGTATCCGTTGCCTCAGCTGAATCAGATCTTTGTTTAAAACTAGGAAAGCGGACATACTCTGAAGAATACTGGGGTAGAAACAATAATGAAATTTCAGCGGTTTCTATGAAGTTGTTAACTCCATCTGTTGTCGCTGGGAAATCCAAATTGTGTGGTCAGAGCATGCCAGTCCCGCGTTGCCAAATTGATGGCTGTGAACTGGATCTCTCATCTGCTAAGGGTTATCATCGTAAGCACAAAGTCTGCGAAAAGCATTCAAAGTGCCCAAAAGTTAGCGTGAGTGGCCTGGAACGTCGGTTCTGCCAACAGTGTAGCAGGTTCCATGCTGTCTCTGAATTTGATGAGAAGAAACGAAGCTGCCGAAAACGTCTTTCTCATCATAATGCGAGGCGTCGTAAGCCACAAGGAGTATTTTCAATGAATCCCGAGAGGGTGTATGATCGAAGACAGCATACAAATATGTTGTGGAATGGGGTGTCCCTTAACGCGAGATCTGAAGAAATGTATGAATGGGGTAATAACACTTATGATACAAAGCCTAGACAAACGGAAAAAAGCTTTACTCTGAGCTTCCAGAGAGGTAATGGCTCTGAGGACCAGCTGGTTGCTAGTAGCAGCCGTATGTTCTCTACATCTCAAACCTCAGGTGGGTTCCCAGCAGGAAAGTCCAAGTTTCAACTTCATGGCGAAGATGTGGGAGAATACTCAGGAGTCCTCCATGAATCTCAAGATATCCACCGTGCTCTCTCTCTTCTGTCAACCTCTTCGGATCCCCTGGCCCAACCACATGTGCAGCCATTTTCTCTACTCTGTTCATATGATGTTGTACCAAAATAGATGAGTAAGTAATGTGTAATTTGTAAACCTGTTACTCAGTTGGTGGATACTTTTCCAAACCTATGATAAAAACCTCGTCCTAGATCCCGTTAAATGCCAAACTTTCGGCTACTATAACTATGTTATCGTTATCATTATCATTGTTTAACACCCT%0D%0A%3EAT1G32140.1%20%7C%20Symbols%3A%20%20%7C%20F-box%20family%20protein%20%7C%20chr1%3A11562722-11564813%20REVERSE%0D%0AATGACGATGATGTCCGACCTTTCACTTGATTTAGTCGAAGAGATATTGTGTAGGGTTCCGATAACTTCTCTTAAAGCAGTGAGATCTAGTTGCAAACTATGGAACGTTCTTTCCAAGAACCGGATTTTATGTAAAACAGAAGCTAGAAATCAGTTTTTAGGGTTCACGATAATGAATCATAGGCTTTATTCCATGAGATTCAATCTCCATGGAATCGGCCTCAATGAAAACAGTGAAGAGTTCATTGATCCATCTATAAAGCCAATAGGTAATTTACTTAATCAAGTCGAGATATCTAAAGTGTTTTATTGCGAAGGTTTATTGTTATGCGTCACAAGGAACCACTCAAGCAAGCTCGTAGTTTGGAACCCGTATTTGGGAGAAATTCGTTGGATCAAAACTAGGAATGATTACCACATAGGCGTTACATATGCTCTCGGGTACGACAACAACAAGAACCACATGATCTTGAGGTTTTTTTCTGAACAAGGCTACTACGAGATTTACGACATGAACTCTTCTGACTCATGGGATTGTTTTTATGGCATTCCCAACAAGGGGTTAAAATGTTATCAGCCCGGCGCGTCGTTAAATGGAAATGCTTATTTTTTGACTGAGGGAAGAGAAGTAATGGAAGGGTATGATTGCTTACTCGGTTTTGATTTTACAACAAAGAAATTTGGACCACTTCTTTCTTTGTCGTTTTCGCATGATTTTATAGAGACTGGGAGACTATCTTGTGTTAAAGGAGAGAAACTTGCGGTCTTATATCAGCGCTGCTATACCTATGAGATGGAGGTATGGGTGACAACTAAGATAGAGCCGAATGCGGTGTCATGGAGCAAATTCTTAGCAGTTGAAATGGAACCACTCACTAGTCTAAAGTTTAACGATGATTCTGGCAGTTTCTTCATTGACGAAGAGAAGAAAATCGTCGTGGTTTTTGATATAGACGAATCTGAACGCAACAATACGGCTTACATCATTGGAGATTATGGATGCTTGAAAGAAGTTGATCTTGATGAAGTTGTGAACCCACAAGAATCTGTGGAGGTCGGAGACCGCATTTATTCTTTTTCACCATTTGTGTGCTCTTGCTCTTATGTTCCAAGTTTAGTGAAATTTAAAGAAGATGCAGAACATGAAAGGAAAGATAAGAAGAGGAAGAGTAAGAGGAAGCGAACCAACAAGGATGGATATGATTTTATACTGTGTTTTGATTTTACAACCGAGAGATTTGGACAGATTCTTCCTCTGCCGTTTAAACATTCTTTTAGGGATACTTGGACTCTATCTTCTGTTAAAGAAGAGAAACTTGCAGTCGCAGTGTTATACTGGAAAAATACATGTGTGATGATAGAGATATGGATGACAATTAAGATTGATCCTAATGTCGAGTCGTGGAGCAAATTCTTAAGAGTTGATAGGAAACCATGCATTGATCTTCGCTTTGATGATCGTAATGACAGTTTTTTCATTGACGAAGAGAAGAAAGTTGTCGTGTTTTTTAGTTCAGACAAAGTTAAAACCTCTACGGCTTACGTCATTGGAGATAATAGATATTTGAGAACAGTGGATCTTGAAAAAGCTGCAAACTCCCAAGAATCTGTGGAGGTCGGAGAACGCGTGTATTGTTTTTCGCCGCTTGTGTGCTCTTGCTCTTATTATGTTCCAAGTTTGGTGAAAATCAACCACAATGCAGGACGCAAAAGGAAAGAGAAGAAGACGAAGCGCAAAAGTAAAGACAAGCAGATGAAACTAAGCAACAAGGTGTAA%0D%0A%3EAT2G42200.1%20%7C%20Symbols%3A%20%20%7C%20squamosa%20promoter-binding%20protein-like%209%20(SPL9)%20%7C%20chr2%3A17594485-17596708%20FORWARD%0D%0AACCACTCTCGTCTCTTTCTTTTTTCCTTCTGTTCTGTTTCTCTCTCTAAACCCAAAACAGTCAAAATCAGGGAAGCCGAAATTTTCTTTGCTTTCTTCTCCTTTGGTCCTTTCTTTAAACCCGAGACAGTTAGGTTTGTGTGAGAGAGAGAATGATGAGTAAAACCCTTTCTGTCTGAGTAAGAGGAAACCAACATGGAGATGGGTTCCAACTCGGGTCCGGGTCATGGTCCGGGTCAGGCAGAGTCGGGTGGTTCCTCCACTGAGTCATCCTCTTTCAGTGGAGGGCTCATGTTTGGCCAGAAGATCTACTTCGAGGACGGTGGTGGTGGATCCGGGTCTTCTTCCTCAGGTGGTCGTTCAAACAGACGTGTCCGTGGAGGCGGGTCGGGTCAGTCGGGTCAGATACCAAGGTGCCAAGTGGAAGGTTGTGGGATGGATCTAACCAATGCAAAAGGTTATTACTCGAGACACCGAGTTTGTGGAGTGCACTCTAAAACACCTAAAGTCACTGTGGCTGGTATCGAACAGAGGTTTTGTCAACAGTGCAGCAGGTTTCATCAGCTTCCGGAATTTGACCTAGAGAAAAGGAGTTGCCGCAGGAGACTCGCTGGTCATAATGAGCGACGAAGGAAGCCACAGCCTGCGTCTCTCTCTGTGTTAGCTTCTCGTTACGGGAGGATCGCACCTTCGCTTTACGAAAATGGTGATGCTGGAATGAATGGAAGCTTTCTTGGGAACCAAGAGATAGGATGGCCAAGTTCAAGAACATTGGATACAAGAGTGATGAGGCGGCCAGTGTCGTCACCGTCATGGCAGATCAATCCAATGAATGTATTTAGTCAAGGTTCAGTTGGTGGAGGAGGGACAAGCTTCTCATCTCCAGAGATTATGGACACTAAACTAGAGAGCTACAAGGGAATTGGCGACTCAAACTGTGCTCTCTCTCTTCTGTCAAATCCACATCAACCACATGACAACAACAACAACAACAACAACAACAACAACAACAACAACAATACATGGCGAGCTTCTTCAGGTTTTGGCCCGATGACGGTTACAATGGCTCAACCACCACCTGCACCTAGCCAGCATCAGTATCTGAACCCGCCTTGGGTATTCAAGGACAATGATAATGATATGTCTCCTGTTTTGAATTTAGGTCGATACACCGAGCCAGATAATTGTCAGATAAGTAGTGGCACGGCAATGGGTGAGTTCGAGTTATCTGATCACCATCATCAAAGTAGGAGACAGTACATGGAAGATGAGAACACAAGGGCTTATGACTCTTCTTCTCACCATACCAACTGGTCTCTCTGACTTGTCTTTGCATCAGAGAATCTTCTTACAATGAACGATTCTGCAATATCTTATCTTTTTGCTTCTTTGTTTATTCTGTTATCTGCTATCAATAAACCAGACAATTGTTGCCAGATAATGGCTTTTGATTTTGATTTGTTGTTTTATCTCCATGAAAATCCAAGTTATGAGATCAGATT%0D%0A%3EAT1G49910.1%20%7C%20Symbols%3A%20%20%7C%20WD-40%20repeat%20family%20protein%20%2F%20mitotic%20checkpoint%20protein%2C%20putative%20%7C%20chr1%3A18482693-18485143%20FORWARD%0D%0AATGACTTTGGTGCCGGCCATTGGTCGCGAGCTCTCGAATCCACCGTCCGATGGGATTTCTAATCTTCGATTTTCTAATAACAGCGATCATTTACTAGTCTCTTCATGGGATAAGAGTGTAAGATTGTATGATGCGAACGGCGATTTGATGAGAGGGGAGTTTAAACATGGTGGAGCGGTACTCGATTGCTGCTTCCATGATGATTCTTCTGGATTCAGTGTTTGCGCCGATACTAAAGTTAGAAGAATTGACTTCAATGCTGGCAAAGAAGACGTTTTGGGTACGCATGAGAAGCCAGTTCGATGTGTTGAGTATTCTTATGCTGCAGGGCAAGTGATCACTGGAAGTTGGGATAAAACGATTAAATGTTGGGATCCAAGAGGTGCAAGTGGGACTGAGCGCACACAGATTGGAACTTATATGCAACCTGAGCGTGTTAACTCTCTTTCTCTTGTTGGAAATCGTTTGGTAGTGGCAACAGCAGGAAGGCATGTCAACATTTATGATCTTAGAAATATGTCCCAGCCTGAGCAAAGAAGAGAGTCCTCACTTAAATACCAGACAAGATGTGTACGTTGTTATCCCAACGGAACAGGATATGCCCTTAGCTCTGTTGAAGGGAGGGTTTCAATGGAGTTTTTTGATCTATCAGAAGCTGCTCAGGCTAAAAAATATGCTTTCAAATGTCACCGGAAATCAGAGGATGGAAGGGACATTGTCTACCCTGTAAATGCAATTGCTTTCCATCCGATTTATGGCACTTTTGCTTCCGGAGGCTGTGATGGTTTTGTCAACATTTGGGACGGTAACAATAAGAAGAGGCTTTATCAGTACTCTAAGTATCCAACAAGTATTGCGGCGCTGTCATTCAGCCGAGATGGTGGATTACTGGCTGTTGCTTCTAGTTACACGTTTGAAGAGGGAGACAAACCGCATGAACCGGACGCCATCTTTGTTAGAAGTGTTAATGAAATTGAAGTGAAACCGAAACCCAAAGTATACCCAAATCCCCCGGTATAGTCAAGAAATAATGGAATGAGCAGAGTCAAATTCGACTTGTGTGTTGTTGTATTGTAGCACTTGAAAGTGAGTTATAAAATCTTATTTTGGCTGTAAAGTGAAATGTGAACGTTATAATGGCTTTCGAATCTGAGATGGTGTTCCATTTACTCTCTGGGTTGCCTCCAATTTTTCTTTTAGGACCAACTATCTTATTTTTACCTT%0D%0A%3EAT1G48460.1%20%7C%20Symbols%3A%20%20%7C%20similar%20to%20unknown%20protein%20%5BArabidopsis%20thaliana%5D%20(TAIR%3AAT5G63040.2)%3B%20similar%20to%20Os01g0704200%20%5BOryza%20sativa%20(japonica%20cultivar-group)%5D%20(GB%3ANP_001044004.1)%3B%20similar%20to%20hypothetical%20protein%20MtrDRAFT_AC124952g33v1%20%5BMedicago%20truncatula%5D%20(GB%3AABE93586.1)%3B%20contains%20domain%20Multidrug%20resistance%20ABC%20transporter%20MsbA%2C%20N-terminal%20domain%20(SSF90123)%20%7C%20chr1%3A17915014-17916968%20FORWARD%0D%0AAGAAAACAATTCCAAAAAATAAAATGTCAGAAAAGAATTTTCTTTTAGAATAAAGACAGTGAAGAGATTTATTTCAAAGCCTGGGTTTAAGCTGCTGAGAGAACACAAAAAACCCTAACAAAAATGGAATCGAAAGCAATTTGCTTAGGGTTTCTTCCTCCAAGACTTCGATTTTCATCTCCACGTTTACTCTCTCTTCCTCCTTCTCCTCCTGCTTCTTCCACATTTGCGACGCGTCACAAACTTGATTCCAGACAAACCCTCCTTTGGAACAAACCGCAATTGAGCCGAGTTCGTGTAGCGTGTTCTTCTTCTCAATCTGACTCAAGACCTGAGAAGAAGCAATCGGATAAGAGTAACTATGCTCGAGCTGAGCTGTTCCGTGGGAAATCAGGTTCTGTTTCTTTCAATGGTCTGACTCATCAGCTGGTTGAAGAAAGTAAACTGGTTTCAGCTCCGTTTCAAGAAGAGAAAGGTTCTTTCTTGTGGGTTTTGGCTCCTGTTGTTTTGATTTCTTCGTTGATTCTTCCTCAGTTCTTTCTAAGTGGTATCATTGAAGCTACCTTCAAAAACGACACTGTTGCTGAAATTGTTACTTCTTTTTGCTTTGAGACGGTGTTTTATGCTGGTCTTGCGATATTCCTGTCTGTGACTGACCGAGTGCAGAGGCCGTACTTAGACTTCAGCTCCAAGAGATGGGGTCTGATCACTGGACTGAGGGGATACCTTACGTCTGCATTCCTCACGATGGGTTTAAAAGTTGTAGTTCCCGTATTTGCTGTTTACATGACTTGGCCAGCTCTTGGAATAGATGCTTTGATTGCAGTGCTTCCTTTCTTGGTTGGCTGTGCAGTTCAAAGAGTTTTCGAGGCTCGGCTTGAAAGACGTGGCTCATCCTGTTGGCCCATTGTTCCAATAGTCTTTGAGGTGTATAGGCTGTATCAGGTGACAAGAGCAGCGACTTTTGTTCAGAGGCTGATGTTTATGATGAAAGATGCGGCAACGACTGCTGAAATAACAGAGCGAGGAGTTGCACTAGTTGGTTTGGTTGTGACTTTGCAGTTTCTAGCTGTTATGTGTCTCTGGTCGTTTATCACTTTTCTTATGCGCCTCTTTCCTTCTAGACCTGTAGGTGAAAACTACTAGATCTCAGTGTTTAGTGATTGTTAGATGTAGCCAAATCCCATCGGTTTTGTTTTGTTTCTGTGTTCATTTCAGTAGTAATGAATTGTATTAAGTCACTTTAAGAATTGGTTGATCATGTGAAATGAGAATTGGCTGGAAATGTTATAGAACG%0D%0A%3EAT5G50570.2%20%7C%20Symbols%3A%20%20%7C%20squamosa%20promoter-binding%20protein%2C%20putative%20%7C%20chr5%3A20599309-20601106%20REVERSE%0D%0AAAAAAGGACAAATCTTGATATTGCTTTGATTGCTGTTGTGTATGTATGTGTTTTTATAGTGAGAGAAGAAAAAAAAGCACAATCTTTGAATGGACTGGAATTTCAAACTTAGCTCTGGTTATTTATCTGGATTCGATCAAGAACCAGATTTATCACCAATGGATGGTTCGATCTCGTTTGGTGGGTCGTCACAGTCAAAAGCGGATTTTTCATTTGATCTAAAACTTGGAAGAAACATTGGAAACTCTTCCTCTGTTTTTGGTGATACAGAGCAAGTGATTAGTCTTAGTAAGTGGAAAGATAGTGCTTTAGCTAAACCAGAAGGTTCAAGAAGCTCGAGTTCAAAGAGAACAAGAGGGAATGGTGTTGGAACCAACCAGATGCCGATTTGTCTTGTTGATGGATGTGATTCTGATTTTAGTAATTGTAGAGAGTATCATAAGAGACATAAAGTTTGTGATGTTCATTCAAAAACTCCTGTGGTTACTATTAATGGTCATAAACAGAGGTTTTGTCAACAATGCAGCAGGTTTCATGCTTTGGAGGAGTTTGATGAAGGGAAGAGAAGTTGTAGGAAACGTCTTGATGGACATAATCGAAGACGACGGAAGCCGCAGCCTGAACATATCGGTCGTCCTGCCAACTTCTTTACGGGTTTTCAAGGTAGCAAATTGCTAGAGTTTTCTGGTGGTTCACATGTGTTTCCAACTACATCTGTGTTGAACCCGAGCTGGGGAAATAGTCTTGTAAGCGTTGCTGTAGCCGCCAATGGTTCGAGTTATGGGCAGAGCCAGAGCTATGTTGTTGGTTCTTCTCCTGCAAAGACAGGGATAATGTTTCCAATCTCTTCTTCTCCAAACAGTACCAGAAGCATAGCAAAACAATTCCCTTTCTTGCAAGAAGAAGAAAGCTCGAGAACCGCATCGTTGTGTGAGAGAATGACGAGTTGCATCCATGACTCTGATTGTGCTCTCTCTCTTCTGTCATCCTCCTCGTCGTCAGTCCCTCATTTGCTTCAACCACCACTTTCTTTGTCCCAAGAAGCAGTTGAGACAGTTTTTTACGGGTCGGGATTGTTTGAGAATGCGAGTGCAGTCTCTGATGGATCGGTTATATCCGGTAACGAGGCTGTCCGTCTTCCGCAGACATTCCCGTTTCATTGGGAGTAGTAGAAGAAGAAGTAGGTAGATAGATAGAATCAGAAAGATCTATTTGTGTCTCTTCTCTTCTCCCTCATTTTTCAATGTTCTTTATCATCATCATTGTTCTTGTTAACACTACAAGAAATATGGACATTCTTAACACACCGAAAACGCTATAATAACGTTTACATAGCGGATTCATAAACGCTGTGTTTGCCGGAGCTATCTTAGAGTGGTCACATACAATAGCGTTTCTTGCTATGCTATTAAATGTTCACATATTATGGCGTAAAAGAAATGCTTTGATTTCCTTTGTTATTGCACAATTTTGATGTTATACTTTTGTAACTCTTTTTAAGGGCTATAAACTATTATTTTGTAGCTATATTTTATAGGCTATGATCTGATATGTTGTAGCTTTATTTTTTTGGCTATAAATCTATAAACAGCCTATAAGTTTGGGACATTTTGTTACACATTTGCAAGAAACCTCTTTTTG%0D%0A&target_uploaded=&top=200'
-headers = {
-  'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="98", "Google Chrome";v="98"',
-  'sec-ch-ua-mobile': '?0',
-  'sec-ch-ua-platform': '"Windows"',
-  'Upgrade-Insecure-Requests': '1',
-  'Content-Type': 'application/x-www-form-urlencoded',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-  'Sec-Fetch-Site': 'same-origin',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-User': '?1',
-  'Sec-Fetch-Dest': 'document',
-  'Cookie': 'session=eyJzaW1wbGVwYWdlIjpmYWxzZX0.YhEQeA.N4sPemlWsAA1q7EwbfdkVXJbqs8'
-}
-
-response = requests.request("POST", url, headers=headers, data=payload)
-type(response)
-
-
-# In[ ]:
-
-
-
 
