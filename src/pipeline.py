@@ -22,6 +22,8 @@ from ct_analizer import get_row
 from filter1 import filter1_run
 from filter2 import filter2
 from utils import *
+from secondary_structure import secondary_structure
+import mirbase
 
 
 ## config
@@ -36,12 +38,15 @@ seed_end = 13
 hit_threshold = 0.8
 precursor_threshold = 0.8
 boi_threshold = 0.8
+num_cpus = 4
+secondary_structure_method = "mfold"
 
 
 input_genome_path = f'{experiment_dir}/{experiment}/{input_genome_name}'
 temp_path = f"{experiment_dir}/{experiment}/Temp"
 result_path = f"{experiment_dir}/{experiment}/Result"
 current_path = os.getcwd()
+
 
 if(not os.path.exists(temp_path)):
     os.mkdir(temp_path)
@@ -58,69 +63,18 @@ def bracket_row(row):
     row['bracket'] = data[index:]
     return row
 
-
-base = "https://www.mirbase.org/ftp/CURRENT"        
-
-
-get_ipython().system('rm -r {mirbase_dir}')
-get_ipython().system('mkdir -p {mirbase_dir}')
-
-get_ipython().system('wget {base}/aliases.txt.gz -P {mirbase_dir}/       ; gzip -d {mirbase_dir}/aliases.txt.gz ')
-get_ipython().system('wget {base}/hairpin.fa.gz -P {mirbase_dir}/           ; gzip -d {mirbase_dir}/hairpin.fa.gz ')
-get_ipython().system('wget {base}/hairpin_high_conf.fa.gz -P {mirbase_dir}/ ; gzip -d {mirbase_dir}/hairpin_high_conf.fa.gz ')
-get_ipython().system('wget {base}/mature.fa.gz -P {mirbase_dir}/            ; gzip -d {mirbase_dir}/mature.fa.gz ')
-get_ipython().system('wget {base}/mature_high_conf.fa.gz -P {mirbase_dir}/  ; gzip -d {mirbase_dir}/mature_high_conf.fa.gz')
-get_ipython().system('wget {base}/miRNA.str.gz -P {mirbase_dir}/            ; gzip -d {mirbase_dir}/miRNA.str.gz ')
-get_ipython().system('wget {base}/miRNA.xls.gz -P {mirbase_dir}/            ; gzip -d {mirbase_dir}/miRNA.xls.gz ')
-get_ipython().system('wget {base}/organisms.txt.gz -P {mirbase_dir}/        ; gzip -d {mirbase_dir}/organisms.txt.gz')
-
-
-mature = fasta_to_df(f'{mirbase_dir}/mature.fa')
-mature_high_conf = fasta_to_df(f'{mirbase_dir}/mature_high_conf.fa')
-mature['trim tag'] = mature['tag'].apply(lambda line: ' '.join(line.split(' ')[:2]))
-mature['confidence'] = mature['trim tag'].isin(mature_high_conf['tag'])
-
-
-mature['organism'] = mature['tag'].apply(lambda x: x[:3])
-print(mature.shape)
-mature.head(2)
-
-
-organism = pd.read_csv(f'{mirbase_dir}/organisms.txt',sep='\t')
-organism.columns = [c.replace('#','') for c in organism.columns] # remove sharp from columns
-print(organism.shape)
-organism.head(2)
-
-
-items = list(organism['tree'].unique())
-items.sort(key=len)
-items
-
-
-selectedTree = organism[organism['tree'].apply(lambda x: "Viridiplantae;" in x)]
-print(selectedTree.shape)
-selectedTree.head(5)
-
-
-#selectedTree = selectedTree[selectedTree['name'] == ""]
-
-
-selected = mature[mature['organism'].isin(selectedTree['organism'])]
-print(selected.shape)
-selected.head(1)
-
-
+# download mirbase if not exist
+if(not os.path.exists(mirbase_dir)):
+    mirbase.download(mirbase_dir)
+selected = mirbase.select_mirs(mirbase_dir)
 df_to_fasta(selected,f'{temp_path}/mature_microRNA_queries.fasta')
 
 
-# Remove redundant
-## cdhit-est
-
-get_ipython().system('./Software/cdhit/cd-hit-est -i ./{temp_path_f}/mature_microRNA_queries.fasta  -o ./{temp_path_f}/NR_mature_microRNA_queries.fasta     -c 1 -r 0 -G 1 -g 1 -b 30 -l 10 -aL 0 -AL 99999999 -aS 0     -AS 99999999 -s 0 -S 0')
+# Remove redundant cdhit-est
+get_ipython().system('./software/cdhit/cd-hit-est -i ./{temp_path_f}/mature_microRNA_queries.fasta  -o ./{temp_path_f}/NR_mature_microRNA_queries.fasta     -c 1 -r 0 -G 1 -g 1 -b 30 -l 10 -aL 0 -AL 99999999 -aS 0     -AS 99999999 -s 0 -S 0')
 
 
-# ## reformat
-
+#reformat
 with open(f'{temp_path}/NR_mature_microRNA_queries.fasta.clstr','r') as file:
     text = file.read()
 lines = [line for line in text.split('\n') if len(line) > 0]
@@ -134,50 +88,33 @@ for l in lines:
         cluster.append(last_cluster)
         seqid.append(l.split(', >')[1].split('...')[0])                
 seq2cluster = pd.DataFrame({'seqid': seqid,'cluster': cluster})
-print(seq2cluster.shape)
-seq2cluster.head(2)    
 
 
 df = fasta_to_df(f"{temp_path}/mature_microRNA_queries.fasta")
 df['accession'] = df['tag'].apply(lambda x : x.split(' ')[0])
-seq2cluster = pd.merge(df,seq2cluster,how="inner",left_on='accession',right_on="seqid")
-seq2cluster = pd.merge(seq2cluster, mature,how="inner",left_on='tag',right_on="tag")[['cluster','seqid','tag', 'confidence']]
-print(seq2cluster.shape)
-display(seq2cluster.head(2))
-seq2cluster.to_csv(f'{temp_path}/seq2cluster.csv',index=False)
-
-
-# todo: sorted first by cluster then by seqid
-seq2cluster.sort_values("cluster").head(2)
+seq2cluster = pd.merge(df, seq2cluster, how="inner",left_on='accession', right_on="seqid")
+seq2cluster = pd.merge(seq2cluster, mature, how="inner", left_on='tag', right_on="tag")[['cluster','seqid','tag', 'confidence']]
+seq2cluster.to_csv(f'{temp_path}/seq2cluster.csv', index=False)
 
 
 df = fasta_to_df(f"{temp_path}/NR_mature_microRNA_queries.fasta")
 df['tag'] = df['tag'].apply(lambda x : x.split(' ')[0])
 df = pd.merge(df,seq2cluster,how="inner",left_on='tag',right_on="seqid")[['cluster','data']]
-
 lines = []
 df.apply(lambda row: lines.append(f">{row['cluster']}\n{row['data']}\n"),axis=1)
-print(df.shape)
 with open(f'{temp_path}/BLASTn_queries.fasta','w') as file:
     file.write(''.join(lines))
 
 
 # BlastN
-path = f'{experiment_dir}/{experiment}/{input_genome_name}'
-get_ipython().system('makeblastdb -in {path} -dbtype nucl -out ./{temp_path_f}/blastn_database')
-
+get_ipython().system('makeblastdb -in {input_genome_path} -dbtype nucl -out ./{temp_path_f}/blastn_database')
 
 header = 'qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen'
 
-
-get_ipython().system("blastn -query ./{temp_path}/BLASTn_queries.fasta         -out ./{temp_path}/BLASTn_result         -num_threads {mp.cpu_count()}         -db ./{temp_path}/blastn_database         -word_size 7         -penalty -3         -reward 2         -gapopen 5         -gapextend 2         -outfmt '6 qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen'       ")
-
-
+get_ipython().system("blastn -query ./{temp_path}/BLASTn_queries.fasta         -out ./{temp_path}/BLASTn_result         -num_threads {mp.cpu_count()}         -db ./{temp_path}/blastn_database         -word_size 7         -penalty -3         -reward 2         -gapopen 5         -gapextend 2         -outfmt '6 {header}'       ")
 
 df_blastn = pd.read_csv(f'{temp_path}/BLASTn_result', sep='\t',header=None)
 df_blastn.columns = header.replace("  "," ").split(" ")
-print(df_blastn.shape)
-df_blastn.head(2)
 
 
 # alignment length adjustment
@@ -192,18 +129,13 @@ def blastn_adjust(row):
     
 df_blastn = df_blastn.apply(lambda row: blastn_adjust(row), axis=1)
 
-
 df_blastn['Nonconformity'] = df_blastn['qlen'] - (abs(df_blastn['qend'] - df_blastn['qstart']) + 1) + df_blastn['gaps'] + df_blastn['mismatch']
 df_blastn = df_blastn[df_blastn['Nonconformity'] <= nonconformity]
-print(df_blastn.shape)
-df_blastn.head(2)
-
 
 # remore redundancy and hold best one base of Nonconformity value
 df_blastn = df_blastn.sort_values(["Nonconformity", "evalue"], ascending = (True, True))
 df_blastn = df_blastn.drop_duplicates(subset=['sseqid','sstart', 'qseqid', 'send','sstrand'], keep='first')
 df_blastn.to_csv(f'{temp_path}/filtered_out_blastn.csv')
-print(df_blastn.shape)
 
 
 # # Result of the blastn to bed file
@@ -238,7 +170,6 @@ def convert2sign(inp):
 df['sign'] = df['sstrand'].apply(lambda x: convert2sign(x))
 
 
-
 df['hit_length'] = df.apply(lambda row: abs(row['send'] - row['sstart']) + 1 ,axis=1)
 
 
@@ -246,29 +177,18 @@ df['hit_length'] = df.apply(lambda row: abs(row['send'] - row['sstart']) + 1 ,ax
 df['sstart'] = df['sstart'].apply(lambda x: x - 1)
 
 df['downstream_flanking'] = df['sstart'].apply(lambda x:  flanking_value if x > flanking_value else x)
-df['upstream_flanking'] = df.apply(lambda row:  flanking_value if (row['send']+flanking_value) <= row['slen'] else row['slen'] - row['send'],axis=1)
-
-df['hit_start'] = df.apply(lambda row: row['downstream_flanking'] if row['sign'] == "+" else row['upstream_flanking'],axis=1)
-
+df['upstream_flanking'] = df.apply(lambda row:  flanking_value if (row['send']+flanking_value) <= row['slen'] else row['slen'] - row['send'], axis=1)
+df['hit_start'] = df.apply(lambda row: row['downstream_flanking'] if row['sign'] == "+" else row['upstream_flanking'], axis=1)
 df['hit_end'] = df.apply(lambda row: row['downstream_flanking'] + row['hit_length'] if row['sign'] == "+" else row['upstream_flanking'] + row['hit_length'],axis=1)
-
-
 df['sstart'] = df['sstart'].apply(lambda x: max(x - flanking_value, 0))
 df['send'] = df.apply(lambda row: min(row['send'] + flanking_value , row['slen']),axis=1)
-
-
 df['tag'] = df.apply(lambda row: f">{row['sseqid']}:{row['sstart']}-{row['send']}({row['sign']})",axis=1)
 df['reformated_tag'] = df['tag'].apply(lambda t: reformat(t))
 df[['tag', 'reformated_tag', 'hit_start', 'hit_end']].to_csv(f'./{temp_path}/hit_index_info.csv')#, index=False)
-
-
 df['location_tag'] = df.apply(lambda row: f">{row['sseqid']}|{row['sign']}|{row['sstart'] + 1}-{row['send']}|{row['hit_start']+1}-{row['hit_end']}",axis=1)
 df[['location_tag','qseqid']].to_csv(f'{temp_path}/pipe_seprated_location_list.csv',index=False,sep='\t')
-
-
 df[['sseqid','sstart','send','strand','ones', 'sign']].to_csv(f'{temp_path}/extension_index.bed', 
         index=False, header=False, sep="\t")
-
 
 # Extention 
 get_ipython().system('bedtools getfasta -fi {input_genome_path} -fo {temp_path}/extended_original.txt -s -bed {temp_path}/extension_index.bed')
@@ -279,8 +199,7 @@ get_ipython().system('rm input_genome.fna.fai')
 ext = fasta_to_df(f'{temp_path}/extended_original.txt')
 info = pd.read_csv(f'{temp_path}/hit_index_info.csv')
 info['tag'] = info['tag'].apply(lambda x: x[1:])
-print(info.shape)
-info.head(2)
+
 
 ext = ext.sort_values(by=['tag']).reset_index()
 ext['help_tag'] = ext.apply(lambda r: r['tag'] + str(r.name),axis=1)
@@ -294,8 +213,8 @@ def redefined_tag(row):
     sstart = int(sstart) + 1
     sign = tag.split('(')[-1].split(')')[0]    
     return f"{tag.split(':')[0]}|{sign}|{sstart}-{send}|{row['hit_start']+1}-{row['hit_end']}"
-info['tag'] = info.apply(lambda row: redefined_tag(row),axis=1)
-ext = pd.merge(ext,info,how='inner', on='help_tag')
+info['tag'] = info.apply(lambda row: redefined_tag(row), axis=1)
+ext = pd.merge(ext, info,how='inner', on='help_tag')
 
 def emphasis_hit(row):
     seq = list(row['data'].lower())            
@@ -304,8 +223,8 @@ def emphasis_hit(row):
     seq[s:e] = list(''.join(seq[s:e]).upper())    
     return ''.join(seq)
     
-ext['data'] = ext.apply(lambda row: emphasis_hit(row),axis=1)
-df_to_fasta(ext[['tag','data']],f"{temp_path}/extended_modified.txt")
+ext['data'] = ext.apply(lambda row: emphasis_hit(row), axis=1)
+df_to_fasta(ext[['tag','data']], f"{temp_path}/extended_modified.txt")
 
 
 # Protein coding elimination [Download nr]
@@ -337,132 +256,12 @@ print(f'coding:     {coding.shape[0]}')
 df_to_fasta(coding,f'{temp_path}/extended_modified_coding.txt')
 
 
-# RNA 2d prediction
-## Mfold
-base = f"{result_path}/secondary_structure/mfold/"
-get_ipython().system('rm -r {base}')
-get_ipython().system('mkdir -p {base}')
-df = fasta_to_df(f'{temp_path}/extended_modified_non_coding.txt')
-
-for index, row in df.iterrows():    
-    tag = reformat(row['tag'])
-    if(not os.path.exists(base + tag)):
-        os.makedirs(base + tag)            
-    with open(base + f"{tag}/SEQ.FASTA",'w') as file:
-        file.write(f">{row['tag']}\n{row['data']}")
-    
-
-get_ipython().run_cell_magic('capture', '', 'remove_lock = False\ndef run_mfold(tag):\n    tag = reformat(tag)\n    %cd {base + tag}\n    !mfold  SEQ="SEQ.FASTA" T=22   \n    if(not remove_lock):\n        !find . -name "SEQ*" -not -name "*.ct" -not -name "*.pdf" -not -name "*SEQ.FASTA" -not -type d -delete\n    %cd {current_path}\n\nif __name__ == \'__main__\':        \n    pool = mp.Pool(mp.cpu_count() - 3)      \n    pool.map(run_mfold, df[\'tag\'])  ')
-
-
-## Mxfold2
-get_ipython().system('mxfold2 predict ./extended.txt > Result/secondary_structure/mxfold2_result.txt')
-
-df = fasta_to_df('./Result/secondary_structure/mxfold2_result.txt')
-df = df.apply(lambda row: bracket_row(row) , axis=1)
-df.head(2)
-
-
-base = "./Result/secondary_structure/mxfold2/"
-get_ipython().system('rm -r {base}')
-get_ipython().system('mkdir -p {base}')
-for index, row in df.iterrows():    
-    if(not os.path.exists(base + reformat(row['tag']))):
-        os.makedirs(base + reformat(row['tag']))        
-    tag = reformat(row['tag'])
-    with open(base + f"{tag}/{tag}.ct",'w') as file:
-        bracket = row['bracket'].split(' ')[0]
-        deltaG = row['bracket'].split(' ')[1]
-        ct = bracket_to_ct(row['tag'], row['data'], bracket, deltaG)
-        file.write(ct)    
-
-
-## Vienna package
-base = f"{result_path}/secondary_structure/viennarna/"
-get_ipython().system('rm -r {base}')
-get_ipython().system('rm {result_path}/secondary_structure/viennarna_result.txt')
-get_ipython().system('mkdir -p {base}')
-
-
-get_ipython().system('RNAfold --jobs=0 --infile {current_path}/{temp_path}/extended_modified.txt  --noPS -T 22 > {current_path}/{base}/viennarna_result.txt')
-
-
-df = fasta_to_df(f'{result_path}/secondary_structure/viennarna/viennarna_result.txt')
-df = df.apply(lambda row: bracket_row(row) , axis=1)
-print(df.shape)
-df.head(2)
-
-
-for index, row in df.iterrows():    
-    tag = reformat(row['tag'])
-    if(not os.path.exists(base + tag)):
-        os.makedirs(base + tag)      
-    with open(base + f"{tag}/{tag}.ct",'w') as file:
-        bracket = row['bracket'].split(' ')[0]
-        deltaG = row['bracket'].split(' ')[1]
-        ct = bracket_to_ct(row['tag'], row['data'], bracket, deltaG, False)
-        file.write(ct)    
-
-
-for file in glob.glob(f"{base}*.ps"):    
-    f = file[len(base):-6] # _ss.ps 
-    f = reformat(f)        
-    shutil.move(file, f"{base}{f}/{f}.ps")    
-
-
-## ContraFold
-counter = 0
-base = f"./{result_path}/secondary_structure/contrafold/"
-get_ipython().system('rm -r {base}')
-get_ipython().system('mkdir -p {base}')
-df = fasta_to_df(f'{temp_path}/extended.txt')
-
-for index, row in tqdm(df.iterrows()):    
-    tag = reformat(row['tag'])
-    if(not os.path.exists(base + tag)):
-        os.makedirs(base + tag)            
-    with open(base + f"{tag}/{tag}.FASTA",'w') as file:
-        file.write(f">{row['tag']}\n{row['data']}")
-    counter += 1        
-
-
-def run_contrafold(tag):
-    tag = reformat(tag)    
-    get_ipython().run_line_magic('cd', 'Software/contrafold/src')
-    get_ipython().system('./contrafold predict ../..{base[1:]}{tag}/{tag}.FASTA > ../..{base[1:]}{tag}/{tag}.dot')
-    with open(f"../..{base[1:]}{tag}/{tag}.dot", 'r') as file:
-        text = file.read()
-    text = [l for l in text.split("\n") if l[:len(">structure")] != ">structure"]    
-    header = text[0]
-    with open(f"../..{base[1:]}{tag}/{tag}.dot", 'w') as file:
-        file.write('\n'.join(text[1:]))    
-    get_ipython().system('RNAeval  ../..{base[1:]}{tag}/{tag}.dot -T 20 > ../..{base[1:]}{tag}/{tag}.dotdg    ')
-    with open(f"../..{base[1:]}{tag}/{tag}.dotdg", 'r') as file:
-        text = file.read()
-    with open(f"../..{base[1:]}{tag}/{tag}.dot", 'w') as file:
-        file.write(header + "\n" + text)    
-    
-    df = fasta_to_df(f'../..{base[1:]}{tag}/{tag}.dot')
-    df = df.apply(lambda row: bracket_row(row) , axis=1)        
-    tag = reformat(df['tag'][0])
-    with open(f'../..{base[1:]}{tag}/{tag}.ct','w') as file:
-        bracket = df['bracket'][0].split(' ')[0]        
-        deltaG = df['bracket'][0].split(' ')[1]
-        ct = bracket_to_ct(df['tag'][0], df['data'][0], bracket, deltaG, False)
-        file.write(ct)    
-    #!rm ../..{base[1:]}{tag}/{tag}.dot
-    #!rm ../..{base[1:]}{tag}/{tag}.dotdg
-    get_ipython().system('rm ../..{base[1:]}{tag}/{tag}.FASTA')
-    get_ipython().run_line_magic('cd', '{current_path}')
-
-if __name__ == '__main__':        
-    pool = mp.Pool(mp.cpu_count() - 1)  
-    pool.map(run_contrafold, df['tag'].iloc[:10])
+# Secondary structure prediction
+secondary_structure(secondary_structure_method, result_path, num_cpus)
 
 
 # CTAnalizer
-ss_method = "viennarna"
-base = f"{result_path}/secondary_structure/{ss_method}/"
+base = f"{result_path}/secondary_structure/{secondary_structure_method}/"
 df = fasta_to_df(f'{temp_path}/extended_modified_non_coding.txt')
 index_list =[]
 for index, row in df.iterrows():    
@@ -696,8 +495,7 @@ def same2cluster(same_dict, threshold=0.8):
                 if(jaccard(SET[i],SET[j]) >= threshold):        
                     G.add_edge(SET[i], SET[j], weight=jaccard(SET[i],SET[j]))
                             
-        # get maximal
-    
+        # get maximal    
         for clique in maximal_cliques(G):    
             unique = str(counter).zfill(4)
             counter += 1
@@ -711,9 +509,6 @@ def same2cluster(same_dict, threshold=0.8):
 
 
 # hit jaccard similarity
-
-
-
 same_strand_hit = {}
 
 def same_strand(row):    
