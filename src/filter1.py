@@ -1,18 +1,11 @@
 import tqdm
 import json
 import pandas as pd
-
-
-class dotdict(dict):
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
+from read_configs import DotDict, read_titles, read_erros
 
 
 def filter1_run(input_file="./Result/ct_analizer_clustered.csv", output_file="./Result/result_level1_filter.csv", chunksize=10 ** 5):
-    with open('./src/config/titles.json') as json_file:
-        titles = dotdict(json.load(json_file))
-
+    titles = read_titles()
     header = True
     for chunk in tqdm.tqdm(pd.read_csv(input_file, chunksize=chunksize)):
         level1 = chunk[chunk[titles.msg] == '-']

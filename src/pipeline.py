@@ -17,13 +17,13 @@ from subprocess import Popen, PIPE, STDOUT
 import networkx
 from networkx.algorithms.clique import find_cliques as maximal_cliques
 
-sys.path.append("./src/")
 from ct_analizer import get_row
 from filter1 import filter1_run
 from filter2 import filter2
 from utils import *
 from secondary_structure import secondary_structure
 import mirbase
+from read_configs import *
 
 
 ## config

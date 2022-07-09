@@ -3,16 +3,9 @@ import json
 import tqdm
 import numpy as np
 import pandas as pd
+from read_configs import DotDict, read_titles, read_erros
+titles =  read_titles()
 
-
-# parameter
-class DotDict(dict):
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-with open('./src/config/titles.json') as json_file:
-    titles = DotDict(json.load(json_file))
 
 def _is_allowed(row, type_str, size_str, limit):
     mismatch_type = row[type_str]

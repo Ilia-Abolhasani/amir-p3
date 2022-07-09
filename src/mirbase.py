@@ -1,3 +1,6 @@
+import os
+import pandas as pd
+from utils import fasta_to_df
 mirbase_url = "https://www.mirbase.org/ftp/CURRENT"
 
 def download(mirbase_dir):
