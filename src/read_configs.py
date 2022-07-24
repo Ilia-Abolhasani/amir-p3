@@ -1,3 +1,4 @@
+import os
 import json
 
 class DotDict(dict):
@@ -11,8 +12,8 @@ def _read(path):
         obj = DotDict(json.load(json_file))
     return obj
 
-def read_titles(path='./src/config/titles.json'):
-    return _read(path)    
+def read_titles():    
+    return _read(os.path.dirname(__file__) + "/config/titles.json")    
 
-def read_erros(path= './src/config/errors.json'):
-    return _read(path)
+def read_erros():
+    return _read(os.path.dirname(__file__) + "/config/errors.json")    

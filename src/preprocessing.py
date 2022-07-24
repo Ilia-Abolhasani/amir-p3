@@ -31,6 +31,7 @@ for kmer in tnf:
 
 
 def tnf_calc(dna):
+    dna = dna.replace("N", "")
     counter = 0
     out = _tnf.copy()        
     for i in range(0, len(dna)-(k-1)):        
@@ -191,7 +192,7 @@ def get_sum_in_region(row, type_str, size_str, region):
     return out
 
 
-def preprocessing(df):        
+def preprocessing(df, mu=None, std=None):        
     result = df.copy()
     result = result.reset_index(drop=True)
     cols = ['mismatch type', 'mismatch size']
@@ -311,8 +312,9 @@ def preprocessing(df):
         m = X[X[c] != np.inf][c].max()
         X[c].replace([np.inf], m, inplace=True)    
     # standardization    
-    mu = X.mean()
-    std = X.std()
+    if mu is None or std is None:
+        mu = X.mean()
+        std = X.std()
     X = (X - mu) / std
     # mir type
     encoder = OneHotEncoder(handle_unknown='ignore')
@@ -343,7 +345,7 @@ def preprocessing(df):
     #    cols.append(f"seed connectivity{c}")
     X = X.join(result[cols])    
     X = X.astype("float32")
-    return X
+    return [X, mu, std]
 
 
 def get_target(df, reference):
