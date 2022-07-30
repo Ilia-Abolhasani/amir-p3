@@ -1,0 +1,5 @@
+import sys
+sys.path.append("./src/")
+from ct_analizer import get_row
+path = "./Experiment/O.sativa_plus/Result/secondary_structure/mfold/NC_0292571|-|3280761-3280918|31-51/SEQ.ct"
+get_row("NC_029257.1|-|3280761-3280918|31-51", path, 0)
