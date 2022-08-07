@@ -117,13 +117,13 @@ with open(f"{temp_path}/BLASTn_queries.fasta", "w") as file:
 
 
 # BlastN
-get_ipython().system(
+os.system(
     "makeblastdb -in {input_genome_path} -dbtype nucl -out ./{temp_path_f}/blastn_database"
 )
 
 header = "qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen"
 
-get_ipython().system(
+os.system(
     "blastn -query ./{temp_path}/BLASTn_queries.fasta         -out ./{temp_path}/BLASTn_result         -num_threads {mp.cpu_count()}         -db ./{temp_path}/blastn_database         -word_size 7         -penalty -3         -reward 2         -gapopen 5         -gapextend 2         -outfmt '6 {header}'       "
 )
 
@@ -252,10 +252,10 @@ df[["sseqid", "sstart", "send", "strand", "ones", "sign"]].to_csv(
 )
 
 # Extention
-get_ipython().system(
+os.system(
     "bedtools getfasta -fi {input_genome_path} -fo {temp_path}/extended_original.txt -s -bed {temp_path}/extension_index.bed"
 )
-get_ipython().system("rm input_genome.fna.fai")
+os.system("rm input_genome.fna.fai")
 
 
 # Convert hit region to upper case and other region to lower case
@@ -297,11 +297,11 @@ df_to_fasta(ext[["tag", "data"]], f"{temp_path}/extended_modified.txt")
 
 
 # Protein coding elimination [Download nr]
-get_ipython().system("wget https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz")
+os.system("wget https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz")
 # Protein coding elimination [Diamond]
-get_ipython().system("./diamond makedb --in ./NR/nr -d ./Temp/diamond_output")
+os.system("./diamond makedb --in ./NR/nr -d ./Temp/diamond_output")
 
-get_ipython().system(
+os.system(
     "./diamond blastx -d ./Temp/diamond_output.dmnd                   -q ./Temp/extended_modified.txt                   -o ./Temp/diamond_matches.tsv                   -p 22"
 )
 
@@ -434,7 +434,7 @@ def boi_selection(row):
         repeted_boi[tuple_row_boi] = value
 
 
-get_ipython().system("rm {result_path}/ct_analizer.csv")
+os.system("rm {result_path}/ct_analizer.csv")
 chunksize = 1 * (10**4)
 max_workers = mp.cpu_count() - 4
 num_terminal = 5  # acceptable_terminal_structures
@@ -521,7 +521,7 @@ for chunk in tqdm(pd.read_csv(f"{result_path}/ct_analizer.csv", chunksize=10**5)
 
 
 # Filters
-get_ipython().system("rm {result_path}/result_level1_filter.csv")
+os.system("rm {result_path}/result_level1_filter.csv")
 filter1_run(
     input_file=f"{result_path}/ct_analizer_clustered.csv",
     output_file=f"{result_path}/result_level1_filter.csv",
@@ -743,14 +743,14 @@ result["seed region"] = result["hit seq"].apply(
 
 
 result.to_csv(f"{result_path}/result_level2_filter_clustered.csv", index=False)
-get_ipython().system(
+os.system(
     "zip -r {result_path}/result_level2_filter_clustered.zip {result_path}/result_level2_filter_clustered.csv"
 )
 
 
 # BlastX
-get_ipython().system("makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database")
-get_ipython().system(
+os.system("makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database")
+os.ipython().system(
     'blastx -query ./input_blastx.txt         -db ./NR/nr_database         -out ./Temp/BlastX/blastx         -num_threads 20         -evalue 1e-3         -outfmt "6 qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids"'
 )
 blx = pd.read_csv("./Temp/BlastX/blastx", sep="\t", header=None)
