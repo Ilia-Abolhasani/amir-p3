@@ -5,29 +5,28 @@ import json
 import time
 import glob
 import math
+import shutil
 import numpy as np
 import pandas as pd
+from read_configs import *
+import mirbase
+from secondary_structure import secondary_structure
+from utils import *
+from filter import filter_run
+from postprocess import postprocess
+from ct_analizer import get_row
+from networkx.algorithms.clique import find_cliques as maximal_cliques
+import networkx
+from subprocess import Popen, PIPE, STDOUT
+import urllib.parse
+import multiprocessing as mp
+
 from tqdm.contrib.concurrent import process_map
 from tqdm.notebook import tqdm
-
 tqdm.pandas()
-import multiprocessing as mp
-import shutil
-import urllib.parse
-from subprocess import Popen, PIPE, STDOUT
-import networkx
-from networkx.algorithms.clique import find_cliques as maximal_cliques
-
-from ct_analizer import get_row
-from filter1 import filter1_run
-from filter2 import filter2
-from utils import *
-from secondary_structure import secondary_structure
-import mirbase
-from read_configs import *
 
 
-## config
+# config
 experiment = "A.thaliana"
 input_genome_name = "GCF_000001735.4_TAIR10.1_genomic.fna"
 experiment_dir = "./Experiment"
@@ -73,7 +72,7 @@ df_to_fasta(selected, f"{temp_path}/mature_microRNA_queries.fasta")
 
 
 # Remove redundant cdhit-est
-get_ipython().system(
+os.system(
     "./software/cdhit/cd-hit-est -i ./{temp_path_f}/mature_microRNA_queries.fasta  -o ./{temp_path_f}/NR_mature_microRNA_queries.fasta     -c 1 -r 0 -G 1 -g 1 -b 30 -l 10 -aL 0 -AL 99999999 -aS 0     -AS 99999999 -s 0 -S 0"
 )
 
@@ -111,7 +110,8 @@ df = pd.merge(df, seq2cluster, how="inner", left_on="tag", right_on="seqid")[
     ["cluster", "data"]
 ]
 lines = []
-df.apply(lambda row: lines.append(f">{row['cluster']}\n{row['data']}\n"), axis=1)
+df.apply(lambda row: lines.append(
+    f">{row['cluster']}\n{row['data']}\n"), axis=1)
 with open(f"{temp_path}/BLASTn_queries.fasta", "w") as file:
     file.write("".join(lines))
 
@@ -135,10 +135,12 @@ df_blastn.columns = header.replace("  ", " ").split(" ")
 def blastn_adjust(row):
     if row["sstrand"] == "plus":
         row["sstart"] = max(1, row["sstart"] - (row["qstart"] - 1))
-        row["send"] = min(row["slen"], row["send"] + (row["qlen"] - row["qend"]))
+        row["send"] = min(row["slen"], row["send"] +
+                          (row["qlen"] - row["qend"]))
     if row["sstrand"] == "minus":
         row["send"] = max(1, row["send"] - (row["qstart"] - 1))
-        row["sstart"] = min(row["slen"], row["sstart"] + (row["qlen"] - row["qend"]))
+        row["sstart"] = min(row["slen"], row["sstart"] +
+                            (row["qlen"] - row["qend"]))
     return row
 
 
@@ -153,7 +155,8 @@ df_blastn["Nonconformity"] = (
 df_blastn = df_blastn[df_blastn["Nonconformity"] <= nonconformity]
 
 # remore redundancy and hold best one base of Nonconformity value
-df_blastn = df_blastn.sort_values(["Nonconformity", "evalue"], ascending=(True, True))
+df_blastn = df_blastn.sort_values(
+    ["Nonconformity", "evalue"], ascending=(True, True))
 df_blastn = df_blastn.drop_duplicates(
     subset=["sseqid", "sstart", "qseqid", "send", "sstrand"], keep="first"
 )
@@ -202,7 +205,8 @@ def convert2sign(inp):
 df["sign"] = df["sstrand"].apply(lambda x: convert2sign(x))
 
 
-df["hit_length"] = df.apply(lambda row: abs(row["send"] - row["sstart"]) + 1, axis=1)
+df["hit_length"] = df.apply(lambda row: abs(
+    row["send"] - row["sstart"]) + 1, axis=1)
 
 
 # convert sstart and send from location to index (range)
@@ -370,8 +374,10 @@ seq2cluster["seqid"] = seq2cluster.groupby(["cluster"])["seqid"].transform(
     lambda x: ",".join(x)
 )
 seq2cluster = seq2cluster.drop_duplicates()
-tag2cluster = pd.read_csv(f"./{temp_path}/pipe_seprated_location_list.csv", sep="\t")
-tag2cluster["location_tag"] = tag2cluster["location_tag"].apply(lambda x: x[1:])
+tag2cluster = pd.read_csv(
+    f"./{temp_path}/pipe_seprated_location_list.csv", sep="\t")
+tag2cluster["location_tag"] = tag2cluster["location_tag"].apply(
+    lambda x: x[1:])
 data = pd.merge(
     seq2cluster, tag2cluster, how="inner", left_on="cluster", right_on="qseqid"
 )
@@ -472,11 +478,12 @@ for chunk in tqdm(arr):
 
     # cluster refs
     chunk[rcols_dg].apply(lambda row: boi_selection(row), axis=1)
-    chunk.to_csv(f"{result_path}/ct_analizer.csv", header=header, mode="a", index=False)
+    chunk.to_csv(f"{result_path}/ct_analizer.csv",
+                 header=header, mode="a", index=False)
     header = False
 
 
-get_ipython().system("rm {result_path}/ct_analizer_clustered.csv")
+os.system("rm {result_path}/ct_analizer_clustered.csv")
 
 
 def isKeepCluster(row):
@@ -514,9 +521,11 @@ def makeCluster(row):
 
 header = True
 for chunk in tqdm(pd.read_csv(f"{result_path}/ct_analizer.csv", chunksize=10**5)):
-    chunk = chunk[chunk[rcols_dg].apply(lambda row: isKeepCluster(row), axis=1)]
+    chunk = chunk[chunk[rcols_dg].apply(
+        lambda row: isKeepCluster(row), axis=1)]
     chunk = chunk.apply(lambda row: makeCluster(row), axis=1)
-    chunk.to_csv(f"{result_path}/ct_analizer_clustered.csv", mode="a", index=False)
+    chunk.to_csv(f"{result_path}/ct_analizer_clustered.csv",
+                 mode="a", index=False)
     header = False
 
 
@@ -641,7 +650,8 @@ def _f(row):
     return same_strand_hit[f"{key}"][row["hit position on chromosome"]]
 
 
-result["hit cluster number"] = result[rcols_hit].apply(lambda row: _f(row), axis=1)
+result["hit cluster number"] = result[rcols_hit].apply(
+    lambda row: _f(row), axis=1)
 
 
 rcols_boi = ["boi seq", "boi name", "boi dotbracket"]
@@ -683,7 +693,8 @@ def _f(row):
     return same_strand_boi[f"{key}"][hit]
 
 
-result["boi cluster number"] = result[rcols_boi].apply(lambda row: _f(row), axis=1)
+result["boi cluster number"] = result[rcols_boi].apply(
+    lambda row: _f(row), axis=1)
 
 
 same_strand_precursor = {}
@@ -735,10 +746,11 @@ hit2cluster = {}
 hit_unique = result["hit seq"].unique()
 for i in range(0, hit_unique.shape[0]):
     hit2cluster[hit_unique[i]] = str(i + 1).zfill(4)
-result["identical hit cluster"] = result["hit seq"].apply(lambda hit: hit2cluster[hit])
+result["identical hit cluster"] = result["hit seq"].apply(
+    lambda hit: hit2cluster[hit])
 
 result["seed region"] = result["hit seq"].apply(
-    lambda hit: hit[seed_start - 1 : seed_end]
+    lambda hit: hit[seed_start - 1: seed_end]
 )
 
 

@@ -3,7 +3,7 @@ import pandas as pd
 from read_configs import DotDict, read_titles, read_erros
 
 
-def filter1_run(
+def filter_run(
     input_file="./Result/ct_analizer_clustered.csv",
     output_file="./Result/result_level1_filter.csv",
     chunksize=10**5,

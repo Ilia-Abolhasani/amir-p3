@@ -5,9 +5,11 @@ from tqdm import tqdm
 import shutil
 import pandas as pd
 import multiprocessing as mp
-from utils import reformat, fasta_to_df, bracket_row, bracket_to_ct
+from utils import *
 
-## Mfold
+# Mfold
+
+
 def _mfold(result_path, num_cpus):
     base = f"{result_path}/secondary_structure/mfold/"
     os.system("rm -r {base}")
@@ -28,7 +30,7 @@ def _mfold(result_path, num_cpus):
     )
 
 
-## Mxfold2
+# Mxfold2
 def _mxfold2(result_path, num_cpus):
     os.system(
         "mxfold2 predict ./extended.txt > Result/secondary_structure/mxfold2_result.txt"
@@ -51,7 +53,7 @@ def _mxfold2(result_path, num_cpus):
             file.write(ct)
 
 
-## Vienna package
+# Vienna package
 def _viennarna(result_path, num_cpus):
     base = f"{result_path}/secondary_structure/viennarna/"
     os.system("rm -r {base}")
@@ -80,12 +82,12 @@ def _viennarna(result_path, num_cpus):
             file.write(ct)
 
     for file in glob.glob(f"{base}*.ps"):
-        f = file[len(base) : -6]  # _ss.ps
+        f = file[len(base): -6]  # _ss.ps
         f = reformat(f)
         shutil.move(file, f"{base}{f}/{f}.ps")
 
 
-## ContraFold
+# ContraFold
 def _contrafold(result_path, num_cpus):
     counter = 0
     base = f"./{result_path}/secondary_structure/contrafold/"
@@ -109,7 +111,8 @@ def _contrafold(result_path, num_cpus):
         )
         with open(f"../..{base[1:]}{tag}/{tag}.dot", "r") as file:
             text = file.read()
-        text = [l for l in text.split("\n") if l[: len(">structure")] != ">structure"]
+        text = [l for l in text.split(
+            "\n") if l[: len(">structure")] != ">structure"]
         header = text[0]
         with open(f"../..{base[1:]}{tag}/{tag}.dot", "w") as file:
             file.write("\n".join(text[1:]))
@@ -127,7 +130,8 @@ def _contrafold(result_path, num_cpus):
         with open(f"../..{base[1:]}{tag}/{tag}.ct", "w") as file:
             bracket = df["bracket"][0].split(" ")[0]
             deltaG = df["bracket"][0].split(" ")[1]
-            ct = bracket_to_ct(df["tag"][0], df["data"][0], bracket, deltaG, False)
+            ct = bracket_to_ct(df["tag"][0], df["data"]
+                               [0], bracket, deltaG, False)
             file.write(ct)
         #!rm ../..{base[1:]}{tag}/{tag}.dot
         #!rm ../..{base[1:]}{tag}/{tag}.dotdg

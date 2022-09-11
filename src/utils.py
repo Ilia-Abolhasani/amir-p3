@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 
@@ -65,7 +66,8 @@ def fasta_to_df(path):
 
 def df_to_fasta(df, path):
     lines = []
-    df.apply(lambda row: lines.append(f">{row['tag']}\n{row['data']}\n"), axis=1)
+    df.apply(lambda row: lines.append(
+        f">{row['tag']}\n{row['data']}\n"), axis=1)
     with open(path, "w") as file:
         file.write("".join(lines))
 
