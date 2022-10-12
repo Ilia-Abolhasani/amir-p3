@@ -512,8 +512,8 @@ def preprocessing(df, mu=None, std=None):
     for c in ["-3", "-2", "-1", "", "+1", "+2"]:
         cols.append(f"connectivity hit start{c}")
         cols.append(f"connectivity hit end{c}")
-    # for c in range(2,13):
-    #    cols.append(f"seed connectivity{c}")
+    #for c in range(2,13):
+        #cols.append(f"seed connectivity{c}")
     X = X.join(result[cols])
     X = X.astype("float32")
     return [X, mu, std]
