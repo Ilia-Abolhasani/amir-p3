@@ -1580,31 +1580,32 @@ def get_row(
         )
     # new feature
     sum_missmatch = sum_of_size_in_hit(
-        result, "mismatch type", "mismatch size")
+        result, titles.mismatch_type, titles.mismatch_size)
 
-    sum_bulge = sum_of_size_in_hit(result, "bulge type", "bulge size")
+    sum_bulge = sum_of_size_in_hit(
+        result, titles.bulge_type, titles.bulge_size)
 
     sum_internal = sum_of_size_in_hit(
-        result, "internal type", "internal loop total size")
+        result, titles.inter_type, titles.inter_size)
 
     sum_internal_hsbl = sum_of_size_in_hit(
-        result, "internal type", "internal loop HSBL")
+        result, titles.inter_type, titles.inter_HSBL)
 
     sum_missmatch_border_proximal = sum_of_size_in_border_line(
-        result, "proximal border line", "mismatch type", "mismatch size", "mismatch start", "mismatch end")
+        result, "proximal border line", titles.mismatch_type, titles.mismatch_size, titles.mismatch_start, titles.mismatch_end)
     sum_missmatch_border_distal = sum_of_size_in_border_line(
-        result, "distal border line", "mismatch type", "mismatch size", "mismatch start", "mismatch end")
+        result, "distal border line", titles.mismatch_type, titles.mismatch_size, titles.mismatch_start, titles.mismatch_end)
 
     sum_bulge_border_proximal = sum_of_size_in_border_line(
-        result, "proximal border line", "bulge type", "bulge size", "bulge start", "bulge end")
+        result, "proximal border line", titles.bulge_type, titles.bulge_size, titles.bulge_start, titles.bulge_end)
     sum_bulge_border_distal = sum_of_size_in_border_line(
-        result, "distal border line", "bulge type", "bulge size", "bulge start", "bulge end")
+        result, "distal border line", titles.bulge_type, titles.bulge_size, titles.bulge_start, titles.bulge_end)
 
     sum_internal_border_proximal = sum_of_size_in_border_line(
-        result, "proximal border line", "internal type", "internal loop HSBL", "internal start", "internal end")
+        result, "proximal border line", titles.inter_type, titles.inter_HSBL, titles.inter_start, titles.inter_end)
 
     sum_internal_border_distal = sum_of_size_in_border_line(
-        result, "distal border line", "internal type", "internal loop HSBL", "internal start", "internal end")
+        result, "distal border line", titles.inter_type, titles.inter_HSBL, titles.inter_start, titles.inter_end)
 
     sum_of_residue = number_of_residue(result)
     sum_bulge_zero = sum_of_size_in_hit_only_zero(result)
