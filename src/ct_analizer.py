@@ -1,5 +1,6 @@
 import math
-import os, sys
+import os
+import sys
 import numpy as np
 import pandas as pd
 from subprocess import Popen, PIPE, STDOUT
@@ -158,7 +159,8 @@ def get_num_of_linking_residues(hit_start, hit_end, star_start, star_end, mir_ty
 
 def get_star_branching(star_start, star_end, star_range, values):
     return not (
-        (values[star_range - 1] < star_start) | (values[star_range - 1] > star_end)
+        (values[star_range - 1] <
+         star_start) | (values[star_range - 1] > star_end)
     ).all()
 
 
@@ -320,7 +322,7 @@ def get_branch_apical_loop_size(branch_start_point, branch_end_point, values):
     branch_apical_loop_end = []
     branch_apical_loop_size = []
     for s, e in zip(branch_start_point, branch_end_point):
-        data = values[s - 1 : e]
+        data = values[s - 1: e]
         index = np.array([i for i in range(s - 1, e)])[data != 0]
         for i in range(len(index) - 1):
             if (
@@ -337,9 +339,11 @@ def get_stem_last_residue(branch_apical_loop_start, branch_apical_loop_end, mir_
     out = []
     for i in range(len(branch_apical_loop_start)):
         if mir_type == "5p":
-            out.append(min(branch_apical_loop_start[i], branch_apical_loop_end[i]))
+            out.append(
+                min(branch_apical_loop_start[i], branch_apical_loop_end[i]))
         if mir_type == "3p":
-            out.append(max(branch_apical_loop_start[i], branch_apical_loop_end[i]))
+            out.append(
+                max(branch_apical_loop_start[i], branch_apical_loop_end[i]))
     return out
 
 
@@ -465,7 +469,7 @@ def get_domain_star(
 
 def get_interfering_structures(domain, values):
     [c, d] = [min(domain[0], domain[-1]) + 1, max(domain[0], domain[-1]) + 1]
-    v = values[c - 1 : d]
+    v = values[c - 1: d]
     return not ((v < c) | (v > d)).all()
 
 
@@ -758,7 +762,8 @@ def get_distance_info(
         # todo
         dist = d["start"] - counter - 1
         if d["type"] == "mismatch":
-            output.append({"type": "mismatch", "dist": dist, "size": d["size"]})
+            output.append(
+                {"type": "mismatch", "dist": dist, "size": d["size"]})
             outputhr.append(f"mismatch=dist:{dist}, size:{d['size']}")
         if d["type"] == "bulge":
             dist = d["start"] - counter
@@ -886,10 +891,10 @@ def visualization(
 
 
 def get_trim_data(nucleotide, index, values, start, end):
-    _n = nucleotide.copy()[start - 1 : end].reset_index(drop=True)
-    _i = (index.copy()[start - 1 : end] - (start - 1)).reset_index(drop=True)
+    _n = nucleotide.copy()[start - 1: end].reset_index(drop=True)
+    _i = (index.copy()[start - 1: end] - (start - 1)).reset_index(drop=True)
     _v = (
-        values.copy()[start - 1 : end]
+        values.copy()[start - 1: end]
         .apply(lambda x: 0 if x == 0 else max(x - (start - 1), 0))
         .reset_index(drop=True)
     )
@@ -919,13 +924,14 @@ def get_MFEI(dg, gc, nuc):
 
 def get_dg_by_vienna(dotbracket):
     dotbracket = dotbracket.replace("%5Cn", "\n")
-    process = Popen(["RNAeval", "-T", "22"], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+    process = Popen(["RNAeval", "-T", "22"], stdout=PIPE,
+                    stdin=PIPE, stderr=STDOUT)
     (output, err) = process.communicate(input=bytes(dotbracket, "ascii"))
     exit_code = process.wait()
     if err:
         dg = None
     else:
-        dg = float(output[(len(dotbracket) + 2) : -2])
+        dg = float(output[(len(dotbracket) + 2): -2])
     return dg
 
 
@@ -933,7 +939,8 @@ def get_dg_by_unafold(nucleotide, index, values):
     ct_str = f"{len(nucleotide)}\n"
     for i in range(0, len(nucleotide)):
         ct_str += f"     {i+1} {nucleotide[i]}      {i}      {i+2}      {values[i]}       {index[i]}\n"
-    process = Popen(["ct-energy", "-t", "22"], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+    process = Popen(["ct-energy", "-t", "22"],
+                    stdout=PIPE, stdin=PIPE, stderr=STDOUT)
     (output, err) = process.communicate(input=bytes(ct_str, "ascii"))
     exit_code = process.wait()
     if err:
@@ -943,8 +950,80 @@ def get_dg_by_unafold(nucleotide, index, values):
     return dg
 
 
+def sum_of_size_in_hit(row, type_str, size_str):
+    _sum = 0
+    mismatch_type = row[type_str]
+    for i in range(len(mismatch_type)):
+        if mismatch_type[i] == "hit region":
+            _sum += row[size_str][i]
+    return _sum
+
+
+def sum_of_size_in_hit_only_zero(row):
+    _sum = 0
+    bulge_type = row["bulge type"]
+    bulge_strand = row["bulge strand"]
+    for i in range(len(bulge_type)):
+        if bulge_type[i] == "hit region" and bulge_strand[i] == "zero":
+            _sum += row["bulge size"][i]
+    return _sum
+
+
+def number_of_residue(row):
+    hit_end = row["hit end"]
+    hit_start = row["hit start"]
+    psep = row["psep"]
+    if psep == "-":
+        return 0
+    mir_type = row["mir type"]
+    if mir_type == "5p":
+        if psep < hit_end:
+            return hit_end - psep
+    if mir_type == "3p":
+        if psep > hit_start:
+            return psep - hit_start
+    return 0
+
+
+def sum_of_size_in_border_line(row, border_type, type_str, size_str, start, end):
+    _sum = 0
+    _size = row[size_str]
+    _start = row[start]
+    _end = row[end]
+    mir_type = row["mir type"]
+    mismatch_type = row[type_str]
+    for i in range(len(mismatch_type)):
+        if mismatch_type[i] == border_type:
+            if border_type == "distal border line":
+                if mir_type == "5p":
+                    _sum += _size[i] - _start[i]
+                if mir_type == "3p":
+                    _sum += _size[i] - _end[i]
+            if border_type == "proximal border line":
+                if mir_type == "5p":
+                    _sum += _size[i] - _end[i]
+                if mir_type == "3p":
+                    _sum += _size[i] - _start[i]
+    return _sum
+
+
+def check_involvement(row):
+    if row["number of terminal structures"] == "-":
+        return None
+    if row["number of terminal structures"] > 1:
+        return True
+    start = row["branch#1 apical loop start"]
+    end = row["branch#1 apical loop end"]
+    for col in ["hit start", "hit end", "star start", "star end"]:
+        if start < row[col] < end:
+            return False
+    return True
+
+
 server_url = "http://jupyter.sysmanager.ir/tree/plant_microRNA_prediction"
 # MCMA: maximum consecutive mismatch allowance
+
+
 def get_row(
     tag,
     path,
@@ -984,7 +1063,8 @@ def get_row(
     result[titles.hit_len] = hit_len
     flanking_gc_content = get_gc_content(nucleotide)
     result[titles.flanking_gc] = flanking_gc_content
-    result[titles.flanking_mfei] = get_MFEI(dg, flanking_gc_content, nucleotide)
+    result[titles.flanking_mfei] = get_MFEI(
+        dg, flanking_gc_content, nucleotide)
     result[titles.hit_gc_content] = get_gc_content(hit_seq)
     inc_srange = values[hit_start:hit_end]  # Incomplete_Star_range
     [
@@ -1009,7 +1089,8 @@ def get_row(
         return pd.Series(result)
 
     [flanking_istar_min, flanking_istar_max] = get_istar_min_max(
-        values[(hit_start - extra) : (hit_end + extra)], hit_self_complementarity
+        values[(hit_start - extra): (hit_end + extra)
+               ], hit_self_complementarity
     )
     # result['flanking istar min']  = flanking_istar_min
     # result['flanking istar max']  = flanking_istar_max
@@ -1026,7 +1107,8 @@ def get_row(
         result[titles.msg] = "discontinuous star strand"
         return pd.Series(result)
 
-    [istar_min, istar_max] = get_istar_min_max(inc_srange, hit_self_complementarity)
+    [istar_min, istar_max] = get_istar_min_max(
+        inc_srange, hit_self_complementarity)
     result[titles.istar_min] = istar_min
     result[titles.istar_max] = istar_max
 
@@ -1044,7 +1126,8 @@ def get_row(
         result[titles.msg] = mir_type
         return pd.Series(result)
     try:
-        [star_start, star_start_msg] = get_star_start(hit_start, hit_end, values)
+        [star_start, star_start_msg] = get_star_start(
+            hit_start, hit_end, values)
         [star_end, star_end_msg] = get_star_end(hit_start, hit_end, values)
         result[titles.star_start] = star_start
         result[titles.star_start_msg] = star_start_msg
@@ -1056,31 +1139,32 @@ def get_row(
 
     star_start_real = star_start
     star_end_real = star_end
-    star_start = istar_min  ############################################
-    star_end = istar_max  ############################################
+    star_start = istar_min
+    star_end = istar_max
     # set1 = set(range(star_start-1 , star_end))
-    set1 = set(range(star_start - 2, star_end + 1))  ######################
+    set1 = set(range(star_start - 2, star_end + 1))
     set2 = set(range(hit_start, hit_end))
     if len(set1.intersection(set2)) > 0:
         result[titles.msg] = "overlap between miRNA and miRNA*"
         return pd.Series(result)
 
-    star_range = index[star_start - 1 : star_end]
-    star_seq = "".join(nucleotide[star_start - 1 : star_end])
+    star_range = index[star_start - 1: star_end]
+    star_seq = "".join(nucleotide[star_start - 1: star_end])
     result[titles.star_seq] = star_seq
     num_of_linking_residues = get_num_of_linking_residues(
         hit_start, hit_end, star_start_real, star_end_real, mir_type
     )
     result[titles.num_of_lnk_res] = num_of_linking_residues
     # print(result)
-    star_branching = get_star_branching(star_start, star_end, star_range, values)
+    star_branching = get_star_branching(
+        star_start, star_end, star_range, values)
     # star_branching = get_star_branching(istar_min, istar_max, inc_srange, values)
     result[titles.star_branching] = "yes" if star_branching else "no"
     [boi_start, boi_end] = get_boi(hit_start, hit_end, values, mir_type)
     if math.isnan(boi_start) or math.isnan(boi_end):
         result["message"] = "unfit BOI structure"
         return pd.Series(result)
-    boi_seq = "".join(nucleotide[boi_start - 1 : boi_end].tolist())
+    boi_seq = "".join(nucleotide[boi_start - 1: boi_end].tolist())
     result[titles.boi_start] = boi_start
     result[titles.boi_end] = boi_end
     result[titles.boi_seq] = boi_seq
@@ -1216,8 +1300,10 @@ def get_row(
             )
         for i in range(acceptable_terminal_structures):
             if i < len(branch_start_point):
-                result[titles.brch_start.format(index=i + 1)] = branch_start_point[i]
-                result[titles.brch_end.format(index=i + 1)] = branch_end_point[i]
+                result[titles.brch_start.format(
+                    index=i + 1)] = branch_start_point[i]
+                result[titles.brch_end.format(
+                    index=i + 1)] = branch_end_point[i]
                 result[titles.brch_total_length.format(index=i + 1)] = (
                     abs(branch_end_point[i] - branch_start_point[i]) + 1
                 )
@@ -1308,8 +1394,10 @@ def get_row(
                 hit_end,
                 mir_type,
             )
-            result[titles.domain_star] = [domain_star[0] + 1, domain_star[-1] + 1]
-            interfering_structures_domain = get_interfering_structures(domain, values)
+            result[titles.domain_star] = [
+                domain_star[0] + 1, domain_star[-1] + 1]
+            interfering_structures_domain = get_interfering_structures(
+                domain, values)
             result[titles.domain_inter_struc] = (
                 "yes" if interfering_structures_domain else "no"
             )
@@ -1416,14 +1504,22 @@ def get_row(
                 primary_stem_end_point, mir_type, hit_start, hit_end, proximal_counter
             )
             result[titles.prim_stem_cor_len] = psep_dist
-            result[titles.prx_closest.format(index=15)] = closestto(proximal, 15)
-            result[titles.prx_closest.format(index=17)] = closestto(proximal, 17)
-            result[titles.prx_closest.format(index=21)] = closestto(proximal, 21)
-            result[titles.prx_closest.format(index=36)] = closestto(proximal, 36)
-            result[titles.distal_closest.format(index=15)] = closestto(distal, 15)
-            result[titles.distal_closest.format(index=17)] = closestto(distal, 17)
-            result[titles.distal_closest.format(index=21)] = closestto(distal, 21)
-            result[titles.distal_closest.format(index=36)] = closestto(distal, 36)
+            result[titles.prx_closest.format(
+                index=15)] = closestto(proximal, 15)
+            result[titles.prx_closest.format(
+                index=17)] = closestto(proximal, 17)
+            result[titles.prx_closest.format(
+                index=21)] = closestto(proximal, 21)
+            result[titles.prx_closest.format(
+                index=36)] = closestto(proximal, 36)
+            result[titles.distal_closest.format(
+                index=15)] = closestto(distal, 15)
+            result[titles.distal_closest.format(
+                index=17)] = closestto(distal, 17)
+            result[titles.distal_closest.format(
+                index=21)] = closestto(distal, 21)
+            result[titles.distal_closest.format(
+                index=36)] = closestto(distal, 36)
             result[titles.distal_junc_dist] = get_junction_distance(
                 distal,
                 boi_dist,
@@ -1468,7 +1564,8 @@ def get_row(
                 composition += "/" + nucleotide[values[(hit_end - 1) + i] - 1]
             elif ((hit_end - 1) + i + 1) in miss_index_to_nuc:
                 composition += (
-                    "/" + nucleotide[miss_index_to_nuc[(hit_end - 1) + i + 1] - 1]
+                    "/" +
+                    nucleotide[miss_index_to_nuc[(hit_end - 1) + i + 1] - 1]
                 )
             else:
                 composition += "/-"
@@ -1481,4 +1578,88 @@ def get_row(
         result[titles.seed_conn.format(index=(i + 1))] = (
             1 if values[hit_start + i] != 0 else 0
         )
+    # new feature
+    sum_missmatch = sum_of_size_in_hit(
+        result, "mismatch type", "mismatch size")
+
+    sum_bulge = sum_of_size_in_hit(result, "bulge type", "bulge size")
+
+    sum_internal = sum_of_size_in_hit(
+        result, "internal type", "internal loop total size")
+
+    sum_internal_hsbl = sum_of_size_in_hit(
+        result, "internal type", "internal loop HSBL")
+
+    sum_missmatch_border_proximal = sum_of_size_in_border_line(
+        result, "proximal border line", "mismatch type", "mismatch size", "mismatch start", "mismatch end")
+    sum_missmatch_border_distal = sum_of_size_in_border_line(
+        result, "distal border line", "mismatch type", "mismatch size", "mismatch start", "mismatch end")
+
+    sum_bulge_border_proximal = sum_of_size_in_border_line(
+        result, "proximal border line", "bulge type", "bulge size", "bulge start", "bulge end")
+    sum_bulge_border_distal = sum_of_size_in_border_line(
+        result, "distal border line", "bulge type", "bulge size", "bulge start", "bulge end")
+
+    sum_internal_border_proximal = sum_of_size_in_border_line(
+        result, "proximal border line", "internal type", "internal loop HSBL", "internal start", "internal end")
+
+    sum_internal_border_distal = sum_of_size_in_border_line(
+        result, "distal border line", "internal type", "internal loop HSBL", "internal start", "internal end")
+
+    sum_of_residue = number_of_residue(result)
+    sum_bulge_zero = sum_of_size_in_hit_only_zero(result)
+
+    result["sum of residue in terminal loop"] = sum_of_residue
+
+    _sum = (
+        sum_bulge
+        + sum_internal
+        + sum_bulge_border_proximal
+        + sum_bulge_border_distal
+        + sum_internal_border_proximal
+        + sum_internal_border_distal
+        + sum_of_residue
+    )
+    result["acceptable num for hit locations in bulges or loops"] = _sum
+
+    result["acceptable num for unmatched locations in hit region * 2"] = (
+        _sum
+        + (sum_missmatch + sum_missmatch_border_proximal +
+           sum_missmatch_border_distal) * 2
+    )
+    result["acceptable num for unmatched locations in hit region"] = _sum + (
+        sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal
+    )
+
+    _sum = (
+        sum_bulge_zero
+        + sum_internal_hsbl
+        + sum_bulge_border_proximal
+        + sum_bulge_border_distal
+        + sum_internal_border_proximal
+        + sum_internal_border_distal
+        + sum_of_residue
+    )
+    result["acceptable num for hit locations in bulges or loops mayers"] = _sum
+
+    result["acceptable num for unmatched locations in hit region mayers * 2"] = (
+        _sum
+        + (sum_missmatch + sum_missmatch_border_proximal +
+           sum_missmatch_border_distal)
+        * 2
+    )
+    result["acceptable num for unmatched locations in hit region mayers"] = _sum + (
+        sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal
+    )
+
+    result["total num of mismached positions"] = sum_missmatch
+
+    result["total num of nonmatching positions"] = (
+        sum_missmatch + sum_bulge + sum_internal
+    )
+
+    result["total num of positions in bulges and loops"] = sum_bulge + sum_internal
+
+    result["mature duplex involvement in apical loop"] = check_involvement(
+        result)
     return pd.Series(result)
