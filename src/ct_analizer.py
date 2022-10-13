@@ -1534,6 +1534,7 @@ def get_row(
             )
         else:
             result[titles.msg] = "immediate branching"
+            return pd.Series(result)
     # for 5p
     if miss_index_to_nuc is None:
         miss_index_to_nuc = {}
