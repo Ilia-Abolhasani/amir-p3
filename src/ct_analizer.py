@@ -953,6 +953,8 @@ def get_dg_by_unafold(nucleotide, index, values):
 def sum_of_size_in_hit(row, type_str, size_str):
     _sum = 0
     mismatch_type = row[type_str]
+    if (mismatch_type is None):
+        return _sum
     for i in range(len(mismatch_type)):
         if mismatch_type[i] == "hit region":
             _sum += row[size_str][i]
@@ -963,6 +965,8 @@ def sum_of_size_in_hit_only_zero(row):
     _sum = 0
     bulge_type = row["bulge type"]
     bulge_strand = row["bulge strand"]
+    if (bulge_type is None):
+        return _sum
     for i in range(len(bulge_type)):
         if bulge_type[i] == "hit region" and bulge_strand[i] == "zero":
             _sum += row["bulge size"][i]
@@ -992,6 +996,8 @@ def sum_of_size_in_border_line(row, border_type, type_str, size_str, start, end)
     _end = row[end]
     mir_type = row["mir type"]
     mismatch_type = row[type_str]
+    if (mismatch_type is None):
+        return _sum
     for i in range(len(mismatch_type)):
         if mismatch_type[i] == border_type:
             if border_type == "distal border line":
