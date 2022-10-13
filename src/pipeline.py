@@ -6,6 +6,7 @@ import time
 import glob
 import math
 import shutil
+import argparse
 import numpy as np
 import pandas as pd
 from read_configs import *
@@ -25,6 +26,30 @@ from tqdm.contrib.concurrent import process_map
 from tqdm.notebook import tqdm
 tqdm.pandas()
 
+# argument
+description = """This is a miRNA prediction pipline.
+Input should be a FASTA files"""
+
+parser = argparse.ArgumentParser(description=description,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 add_help=False)
+
+parser.add_argument('outpath', help='Path to output FASTA file')
+parser.add_argument('inpaths', help='Paths to input FASTA file(s)', nargs='+')
+parser.add_argument('-m', dest='minlength', metavar='', type=int,
+                    default=2000, help='Discard sequences below this length [2000]')
+parser.add_argument('--keepnames', action='store_true',
+                    help='Do not rename sequences [False]')
+parser.add_argument('--nozip', action='store_true',
+                    help='Do not gzip output [False]')
+parser.add_argument('--ncpu', action='store_true',
+                    help='Number of cpu cores.')
+parser.add_argument('--ncpu', action='store_true',
+                    help='Number of cpu cores.')
+
+if len(sys.argv) == 1 or sys.argv[1] in ("-h", "--help"):
+    parser.print_help()
+    sys.exit()
 
 # config
 experiment = "A.thaliana"

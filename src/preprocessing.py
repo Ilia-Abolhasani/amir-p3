@@ -25,7 +25,8 @@ def reverse_complement(dna):
 k = 4
 nuc = ["A", "C", "G", "T"]
 tnf = set(
-    ["".join(np.random.choice(nuc, size=k, replace=True)) for i in range(0, 20000)]
+    ["".join(np.random.choice(nuc, size=k, replace=True))
+     for i in range(0, 20000)]
 )
 _tnf = {}
 for kmer in tnf:
@@ -38,31 +39,13 @@ def tnf_calc(dna):
     counter = 0
     out = _tnf.copy()
     for i in range(0, len(dna) - (k - 1)):
-        kmer = dna[i : i + k]
+        kmer = dna[i: i + k]
         if kmer in out:
             out[kmer] += 1
         else:
             out[reverse_complement(kmer)] += 1
         counter += 1
     return pd.Series(out) / counter
-
-
-# groups = [['A/A', 'G/A', 'A/G', 'G/G'],
-#           ['C/C', 'T/T',  'T/C', 'C/T'],
-#           ['A/C', 'C/A'],
-#           ['T/A', 'A/T'],
-#           ['G/C', 'C/G'],
-#           ['G/T', 'T/G'],
-#           ['-']]
-
-
-# def com_one_hot(n):
-#     out = np.zeros(len(groups))
-#     n = n.upper()
-#     for i in range(len(groups)):
-#         if n in groups[i]:
-#             out[i] = 1
-#     return pd.Series(out)
 
 
 def nuc_one_hot(n):
@@ -97,76 +80,6 @@ def com_one_hot(n):
     return pd.Series(out)
 
 
-def sum_of_size_in_hit(row, type_str, size_str):
-    _sum = 0
-    mismatch_type = row[type_str]
-    for i in range(len(mismatch_type)):
-        if mismatch_type[i] == "hit region":
-            _sum += row[size_str][i]
-    return _sum
-
-
-def sum_of_size_in_hit_only_zero(row):
-    _sum = 0
-    bulge_type = row["bulge type"]
-    bulge_strand = row["bulge strand"]
-    for i in range(len(bulge_type)):
-        if bulge_type[i] == "hit region" and bulge_strand[i] == "zero":
-            _sum += row["bulge size"][i]
-    return _sum
-
-
-def number_of_residue(row):
-    hit_end = row["hit end"]
-    hit_start = row["hit start"]
-    psep = row["psep"]
-    if psep == "-":
-        return 0
-    mir_type = row["mir type"]
-    if mir_type == "5p":
-        if psep < hit_end:
-            return hit_end - psep
-    if mir_type == "3p":
-        if psep > hit_start:
-            return psep - hit_start
-    return 0
-
-
-def sum_of_size_in_border_line(row, border_type, type_str, size_str, start, end):
-    _sum = 0
-    _size = row[size_str]
-    _start = row[start]
-    _end = row[end]
-    mir_type = row["mir type"]
-    mismatch_type = row[type_str]
-    for i in range(len(mismatch_type)):
-        if mismatch_type[i] == border_type:
-            if border_type == "distal border line":
-                if mir_type == "5p":
-                    _sum += _size[i] - _start[i]
-                if mir_type == "3p":
-                    _sum += _size[i] - _end[i]
-            if border_type == "proximal border line":
-                if mir_type == "5p":
-                    _sum += _size[i] - _end[i]
-                if mir_type == "3p":
-                    _sum += _size[i] - _start[i]
-    return _sum
-
-
-def check_involvement(row):
-    if row["number of terminal structures"] == "-":
-        return None
-    if row["number of terminal structures"] > 1:
-        return True
-    start = row["branch#1 apical loop start"]
-    end = row["branch#1 apical loop end"]
-    for col in ["hit start", "hit end", "star start", "star end"]:
-        if start < row[col] < end:
-            return False
-    return True
-
-
 def get_max_in_region(row, type_str, size_str, region):
     out = 0
     mismatch_type = row[type_str]
@@ -198,175 +111,6 @@ def get_sum_in_region(row, type_str, size_str, region):
 def preprocessing(df, mu=None, std=None):
     result = df.copy()
     result = result.reset_index(drop=True)
-    cols = ["mismatch type", "mismatch size"]
-    sum_missmatch = result[cols].apply(
-        lambda row: sum_of_size_in_hit(row, "mismatch type", "mismatch size"), axis=1
-    )
-
-    cols = ["bulge type", "bulge size"]
-    sum_bulge = result[cols].apply(
-        lambda row: sum_of_size_in_hit(row, "bulge type", "bulge size"), axis=1
-    )
-
-    cols = ["internal type", "internal loop total size"]
-    sum_internal = result[cols].apply(
-        lambda row: sum_of_size_in_hit(
-            row, "internal type", "internal loop total size"
-        ),
-        axis=1,
-    )
-
-    cols = ["internal type", "internal loop HSBL"]
-    sum_internal_hsbl = result[cols].apply(
-        lambda row: sum_of_size_in_hit(row, "internal type", "internal loop HSBL"),
-        axis=1,
-    )
-
-    cols = [
-        "mir type",
-        "mismatch type",
-        "mismatch size",
-        "mismatch start",
-        "mismatch end",
-    ]
-    sum_missmatch_border_proximal = result[cols].apply(
-        lambda row: sum_of_size_in_border_line(
-            row,
-            "proximal border line",
-            "mismatch type",
-            "mismatch size",
-            "mismatch start",
-            "mismatch end",
-        ),
-        axis=1,
-    )
-    sum_missmatch_border_distal = result[cols].apply(
-        lambda row: sum_of_size_in_border_line(
-            row,
-            "distal border line",
-            "mismatch type",
-            "mismatch size",
-            "mismatch start",
-            "mismatch end",
-        ),
-        axis=1,
-    )
-
-    cols = ["mir type", "bulge type", "bulge size", "bulge start", "bulge end"]
-    sum_bulge_border_proximal = result[cols].apply(
-        lambda row: sum_of_size_in_border_line(
-            row,
-            "proximal border line",
-            "bulge type",
-            "bulge size",
-            "bulge start",
-            "bulge end",
-        ),
-        axis=1,
-    )
-    sum_bulge_border_distal = result[cols].apply(
-        lambda row: sum_of_size_in_border_line(
-            row,
-            "distal border line",
-            "bulge type",
-            "bulge size",
-            "bulge start",
-            "bulge end",
-        ),
-        axis=1,
-    )
-
-    cols = [
-        "mir type",
-        "internal type",
-        "internal loop HSBL",
-        "internal start",
-        "internal end",
-    ]
-    sum_internal_border_proximal = result[cols].apply(
-        lambda row: sum_of_size_in_border_line(
-            row,
-            "proximal border line",
-            "internal type",
-            "internal loop HSBL",
-            "internal start",
-            "internal end",
-        ),
-        axis=1,
-    )
-    sum_internal_border_distal = result[cols].apply(
-        lambda row: sum_of_size_in_border_line(
-            row,
-            "distal border line",
-            "internal type",
-            "internal loop HSBL",
-            "internal start",
-            "internal end",
-        ),
-        axis=1,
-    )
-
-    cols = ["hit start", "hit end", "psep", "mir type"]
-    sum_of_residue = result[cols].apply(lambda row: number_of_residue(row), axis=1)
-
-    cols = ["bulge type", "bulge strand", "bulge size"]
-    sum_bulge_zero = result[cols].apply(
-        lambda row: sum_of_size_in_hit_only_zero(row), axis=1
-    )
-
-    result["sum of residue in terminal loop"] = sum_of_residue
-
-    _sum = (
-        sum_bulge
-        + sum_internal
-        + sum_bulge_border_proximal
-        + sum_bulge_border_distal
-        + sum_internal_border_proximal
-        + sum_internal_border_distal
-        + sum_of_residue
-    )
-    result["ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS"] = _sum
-
-    result["ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION * 2"] = (
-        _sum
-        + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal)
-        * 2
-    )
-    result["ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION"] = _sum + (
-        sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal
-    )
-
-    _sum = (
-        sum_bulge_zero
-        + sum_internal_hsbl
-        + sum_bulge_border_proximal
-        + sum_bulge_border_distal
-        + sum_internal_border_proximal
-        + sum_internal_border_distal
-        + sum_of_residue
-    )
-    result["ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS_mayers"] = _sum
-
-    result["ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION_mayers * 2"] = (
-        _sum
-        + (sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal)
-        * 2
-    )
-    result["ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION_mayers"] = _sum + (
-        sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal
-    )
-
-    result["TOTAL_NUM_OF_MISMACHED_POSITIONS"] = sum_missmatch
-
-    result["TOTAL_NUM_OF_NONMATCHING_POSITIONS"] = (
-        sum_missmatch + sum_bulge + sum_internal
-    )
-
-    result["TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS"] = sum_bulge + sum_internal
-
-    result["MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP"] = result.apply(
-        lambda row: check_involvement(row), axis=1
-    )
 
     cols = [
         "hit len",
@@ -394,16 +138,16 @@ def preprocessing(df, mu=None, std=None):
         "Loop distal junction distance",
         "Loop proximal junction distance",
         "sum of residue in terminal loop",
-        "ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS",
-        "ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION * 2",
-        "ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION",
-        "ACCEPTABLE_NUM_FOR_HIT_LOCATIONS_IN_BULGES_OR_LOOPS_mayers",
-        "ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION_mayers * 2",
-        "ACCEPTABLE_NUM_FOR_UNMATCHED_LOCATIONS_IN_HIT_REGION_mayers",
-        "TOTAL_NUM_OF_MISMACHED_POSITIONS",
-        "TOTAL_NUM_OF_NONMATCHING_POSITIONS",
-        "TOTAL_NUM_OF_POSITIONS_IN_BULGES_AND_LOOPS",
-        "MATURE_DUPLEX_INVOLVEMENT_IN_APICAL_LOOP",
+        "acceptable num for hit locations in bulges or loops",
+        "acceptable num for unmatched locations in hit region * 2",
+        "acceptable num for unmatched locations in hit region",
+        "acceptable num for hit locations in bulges or loops mayers",
+        "acceptable num for unmatched locations in hit region mayers * 2",
+        "acceptable num for unmatched locations in hit region mayers",
+        "total num of mismached positions",
+        "total num of nonmatching positions",
+        "total num of positions in bulges and loops",
+        "mature duplex involvement in apical loop",
     ]
     for region in [
         "loop distal",
@@ -436,17 +180,20 @@ def preprocessing(df, mu=None, std=None):
         cols.append(f"sum mismatch in {region}")
         _col = ["bulge type", "bulge size"]
         result[f"max bulge in {region}"] = result[_col].apply(
-            lambda row: get_max_in_region(row, "bulge type", "bulge size", region),
+            lambda row: get_max_in_region(
+                row, "bulge type", "bulge size", region),
             axis=1,
         )
         cols.append(f"max bulge in {region}")
         result[f"number bulge in {region}"] = result[_col].apply(
-            lambda row: get_number_in_region(row, "bulge type", "bulge size", region),
+            lambda row: get_number_in_region(
+                row, "bulge type", "bulge size", region),
             axis=1,
         )
         cols.append(f"number bulge in {region}")
         result[f"sum bulge in {region}"] = result[_col].apply(
-            lambda row: get_sum_in_region(row, "bulge type", "bulge size", region),
+            lambda row: get_sum_in_region(
+                row, "bulge type", "bulge size", region),
             axis=1,
         )
         cols.append(f"sum bulge in {region}")
