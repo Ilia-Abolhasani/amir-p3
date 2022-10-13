@@ -1020,34 +1020,6 @@ def check_involvement(row):
     return True
 
 
-def get_max_in_region(row, type_str, size_str, region):
-    out = 0
-    mismatch_type = row[type_str]
-    for i in range(len(mismatch_type)):
-        if mismatch_type[i] == region:
-            if row[size_str][i] > out:
-                out = row[size_str][i]
-    return out
-
-
-def get_number_in_region(row, type_str, size_str, region):
-    counter = 0
-    mismatch_type = row[type_str]
-    for i in range(len(mismatch_type)):
-        if mismatch_type[i] == region:
-            counter += 1
-    return counter
-
-
-def get_sum_in_region(row, type_str, size_str, region):
-    out = 0
-    mismatch_type = row[type_str]
-    for i in range(len(mismatch_type)):
-        if mismatch_type[i] == region:
-            out += row[size_str][i]
-    return out
-
-
 server_url = "http://jupyter.sysmanager.ir/tree/plant_microRNA_prediction"
 # MCMA: maximum consecutive mismatch allowance
 
