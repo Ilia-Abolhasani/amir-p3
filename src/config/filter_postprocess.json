@@ -14,7 +14,7 @@
     "hit_gc_content_percentage_min": 20,
     "hit_gc_content_percentage_max": 80,
     "precursor_mfei_min": 0.5,
-    "precursor_mfei_max":3,
+    "precursor_mfei_max": 3,
     "border_line_mismatch_max": 1,
     "border_line_bulge_max": 0,
     "border_line_internal_max": 0,
