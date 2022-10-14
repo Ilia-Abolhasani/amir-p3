@@ -1617,7 +1617,7 @@ def get_row(
     sum_of_residue = number_of_residue(result)
     sum_bulge_zero = sum_of_size_in_hit_only_zero(result)
 
-    result["sum of residue in terminal loop"] = sum_of_residue
+    result[titles.sum_of_residue_in_loop] = sum_of_residue
 
     _sum = (
         sum_bulge
@@ -1628,14 +1628,14 @@ def get_row(
         + sum_internal_border_distal
         + sum_of_residue
     )
-    result["acceptable num for hit locations in bulges or loops"] = _sum
+    result[titles.accept_num_hit_loc_bulg_loop] = _sum
 
-    result["acceptable num for unmatched locations in hit region * 2"] = (
+    result[titles.accept_num_unmatched_loc_hit_2] = (
         _sum
         + (sum_missmatch + sum_missmatch_border_proximal +
            sum_missmatch_border_distal) * 2
     )
-    result["acceptable num for unmatched locations in hit region"] = _sum + (
+    result[titles.accept_num_unmatched_loc_hit] = _sum + (
         sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal
     )
 
@@ -1648,26 +1648,37 @@ def get_row(
         + sum_internal_border_distal
         + sum_of_residue
     )
-    result["acceptable num for hit locations in bulges or loops mayers"] = _sum
+    result[titles.accept_num_hit_loc_bulg_loops_mayers] = _sum
 
-    result["acceptable num for unmatched locations in hit region mayers * 2"] = (
+    result[titles.accept_num_unmatched_loc_hit_mayers_2] = (
         _sum
         + (sum_missmatch + sum_missmatch_border_proximal +
            sum_missmatch_border_distal)
         * 2
     )
-    result["acceptable num for unmatched locations in hit region mayers"] = _sum + (
+    result[titles.accept_num_unmatched_loc_hit_mayers] = _sum + (
         sum_missmatch + sum_missmatch_border_proximal + sum_missmatch_border_distal
     )
 
-    result["total num of mismached positions"] = sum_missmatch
+    result[titles.total_num_mismached_pos] = sum_missmatch
 
-    result["total num of nonmatching positions"] = (
+    result[titles.total_num_nonmatching_pos] = (
         sum_missmatch + sum_bulge + sum_internal
     )
 
-    result["total num of positions in bulges and loops"] = sum_bulge + sum_internal
+    result[titles.total_num_positions_bulges_loops] = sum_bulge + sum_internal
 
-    result["mature duplex involvement in apical loop"] = check_involvement(
+    result[titles.mature_duplex_apical_loop] = check_involvement(
         result)
+
+    result[titles.sum_border_proximal] = (
+        sum_missmatch_border_proximal
+        + sum_bulge_border_proximal
+        + sum_internal_border_proximal
+    )
+    result[titles.sum_border_distal] = (
+        sum_missmatch_border_distal
+        + sum_bulge_border_distal
+        + sum_internal_border_distal
+    )
     return pd.Series(result)
