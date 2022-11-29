@@ -108,7 +108,7 @@ def get_sum_in_region(row, type_str, size_str, region):
     return out
 
 
-def preprocessing(df, mu=None, std=None):
+def preprocessing(df, mu=None, std=None, make_standard=True):
     result = df.copy()
     result = result.reset_index(drop=True)
 
@@ -229,7 +229,8 @@ def preprocessing(df, mu=None, std=None):
     if mu is None or std is None:
         mu = X.mean()
         std = X.std()
-    X = (X - mu) / std
+    if(make_standard):
+        X = (X - mu) / std
     # mir type
     encoder = OneHotEncoder(handle_unknown="ignore")
     encoder_df = pd.DataFrame(encoder.fit_transform(mirs).toarray())
