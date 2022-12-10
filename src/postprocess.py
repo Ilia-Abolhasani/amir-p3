@@ -233,7 +233,8 @@ def _postprocess_run(inp, config):
 
 # BORDER_LINE_STRUCTURE_ALLOWANCE = "1 END ONLY"  # "NOT ACCEPTED"   "1 END ONLY" "BOTH END"
 def postprocess(input_file, output_file, config=None, chunksize=10**5):
-    os.remove(output_file)
+    if os.path.exists(output_file):
+        os.remove(output_file)
     if config is None:  # read from filter_level2.json
         with open(os.path.dirname(__file__) + "/config/filter_postprocess.json") as json_file:
             config = json.load(json_file)
