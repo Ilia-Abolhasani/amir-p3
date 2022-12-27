@@ -24,10 +24,12 @@ def reverse_complement(dna):
 
 k = 4
 nuc = ["A", "C", "G", "T"]
+np.random.seed(0)
 tnf = set(
     ["".join(np.random.choice(nuc, size=k, replace=True))
-     for i in range(0, 20000)]
+     for i in range(0, 2000)]
 )
+tnf = sorted(list(tnf))
 _tnf = {}
 for kmer in tnf:
     if reverse_complement(kmer) not in _tnf:
