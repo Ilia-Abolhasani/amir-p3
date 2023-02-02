@@ -2,8 +2,7 @@
 .ipynb_checkpoints
 Trash/
 src/__pycache__/
-experiment
-miRBase/
+experiment/
 .vscode/
 .env/
 results/
