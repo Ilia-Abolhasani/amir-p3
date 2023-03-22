@@ -40,8 +40,8 @@ def tnf_calc(dna):
     dna = dna.replace("N", "")
     counter = 0
     out = _tnf.copy()
-    for i in range(0, len(dna) - (k - 1)):
-        kmer = dna[i: i + k]
+    for i in range(0, len(dna) - (k - 1)):        
+        kmer = dna[i: i + k]        
         if kmer in out:
             out[kmer] += 1
         else:
@@ -110,7 +110,7 @@ def get_sum_in_region(row, type_str, size_str, region):
     return out
 
 
-def preprocessing(df, mu=None, std=None, make_standard=True):
+def preprocessing(df, mu=None, std=None, make_standard=True):    
     result = df.copy()
     result = result.reset_index(drop=True)
 

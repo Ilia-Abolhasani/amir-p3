@@ -6,3 +6,4 @@ experiment/
 .vscode/
 .env/
 results/
+mxfold2_env/

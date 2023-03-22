@@ -15,8 +15,8 @@ def _read(path):
 
 
 def read_titles():
-    return _read(os.path.dirname(__file__) + "/config/titles.json")
+    return _read(os.path.dirname(__file__) + "/../config/titles.json")
 
 
 def read_erros():
-    return _read(os.path.dirname(__file__) + "/config/errors.json")
+    return _read(os.path.dirname(__file__) + "/../config/errors.json")
