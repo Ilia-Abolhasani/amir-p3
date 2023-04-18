@@ -1,6 +1,6 @@
-import tqdm
+from tqdm import tqdm
 import pandas as pd
-from read_configs import DotDict, read_titles, read_erros
+from read_configs import read_titles, read_erros
 
 
 def filter_run(
@@ -10,7 +10,7 @@ def filter_run(
 ):
     titles = read_titles()
     header = True
-    for chunk in tqdm.tqdm(pd.read_csv(input_file, chunksize=chunksize)):
+    for chunk in tqdm(pd.read_csv(input_file, chunksize=chunksize)):
         level1 = chunk[chunk[titles.msg] == "-"]
         level1 = level1[level1[titles.star_branching] != "yes"]
         level1 = level1[level1[titles.domain_inter_struc] != "yes"]

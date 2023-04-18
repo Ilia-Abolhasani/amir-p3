@@ -79,7 +79,7 @@ def reformat(path):
 def reformatCT(path):
     with open(path, "r") as file:
         text = file.read()
-    text = [l for l in text.split("\n") if len(l) > 0]  # remove blank lines
+    text = [l for l in text.split("\n") if len(l) > 0]
     text = "\n".join(text)
     text = text.replace("\t", " ")
     while "  " in text:

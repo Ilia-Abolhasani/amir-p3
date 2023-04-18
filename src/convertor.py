@@ -1,4 +1,4 @@
-from read_configs import DotDict, read_titles, read_erros
+from read_configs import read_titles, read_erros
 
 
 def convert(df):
@@ -15,21 +15,21 @@ def convert(df):
     ]:
         df[col] = df[col].apply(lambda x: float(x))
     for col in [
-        "mismatch type",
-        "mismatch size",
-        "mismatch start",
-        "mismatch end",
-        "bulge type",
-        "bulge size",
-        "bulge start",
-        "bulge end",
-        "bulge strand",
-        "internal type",
-        "internal loop total size",
-        "internal start",
-        "internal end",
-        "internal loop HSBL",
-        "internal loop SSBL",
+        titles.mismatch_type,
+        titles.mismatch_size,
+        titles.mismatch_start,
+        titles.mismatch_end,
+        titles.bulge_type,
+        titles.bulge_size,
+        titles.bulge_start,
+        titles.bulge_end,
+        titles.bulge_strand,
+        titles.inter_type,
+        titles.inter_size,
+        titles.inter_start,
+        titles.inter_end,
+        titles.inter_HSBL,
+        titles.inter_SSBL
     ]:
         df[col] = df[col].apply(lambda x: eval(x))
     return df
