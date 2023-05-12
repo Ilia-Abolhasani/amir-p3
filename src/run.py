@@ -15,7 +15,15 @@ class SecondaryStructure(Enum):
         return self.value
 
 
-program_name = "AmiRML-p"
+class ProteinCodingEliminationMethod(Enum):
+    dimond = 'dimond'
+    blastx = 'blastx'
+
+    def __str__(self):
+        return self.value
+
+
+program_name = "AmiR-P3"
 
 description = """This is a miRNA prediction pipline.
 Input should be a FASTA files"""
@@ -25,10 +33,12 @@ parser = argparse.ArgumentParser(prog=program_name,
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  add_help=False)
 
+# arguments
 parser.add_argument('--input',
                     type=str,
                     required=True,
                     help='Path to input genome')
+
 
 parser.add_argument('--ncpu',
                     default=4,
@@ -36,55 +46,91 @@ parser.add_argument('--ncpu',
                     required=False,
                     help='Number of cpu cores')
 
-parser.add_argument('nonconformity',
+
+parser.add_argument('--nc',
                     default=3,
                     type=int,
                     required=False,
                     help='Number of nonconformity')
 
-parser.add_argument('flanking_value',
+
+parser.add_argument('--fv',
                     default=200,
                     type=int,
                     required=False,
                     help='Number of flanking value')
 
-parser.add_argument('seed_start',
+
+parser.add_argument('--ss',
                     default=2,
                     type=int,
                     required=False,
                     help='Start seed position.')
 
-parser.add_argument('seed_end',
+
+parser.add_argument('--se',
                     default=13,
                     type=int,
                     required=False,
                     help='Eed seed position.')
 
-parser.add_argument('hit_threshold',
+
+parser.add_argument('--ht',
                     default=0.8,
                     type=float,
                     required=False,
                     help='Hit threshold jaccard similarity')
 
-parser.add_argument('precursor_threshold',
+
+parser.add_argument('--pt',
                     default=0.8,
                     type=float,
                     required=False,
                     help='Precursor threshold jaccard similarity')
 
-parser.add_argument('boi_threshold',
+
+parser.add_argument('--bt',
                     default=0.8,
                     type=float,
                     required=False,
                     help='BOI threshold jaccard similarity')
 
 
-parser.add_argument('secondary_structure_method',
-                    default=0.8,
+parser.add_argument('--ssm',
+                    default=SecondaryStructure.viennarna,
                     type=SecondaryStructure,
                     choices=list(SecondaryStructure),
                     required=False,
                     help='Secondary structure method')
+
+
+parser.add_argument('--pce',
+                    default=True,
+                    type=bool,
+                    required=False,
+                    help='Protein coding elimination')
+
+
+parser.add_argument('--pcem',
+                    default=ProteinCodingEliminationMethod.dimond,
+                    type=ProteinCodingEliminationMethod,
+                    choices=list(ProteinCodingEliminationMethod),
+                    required=False,
+                    help='Protein coding elimination method')
+
+
+parser.add_argument('--ft',
+                    default=22,
+                    type=int,
+                    required=False,
+                    help='Folding temperature')
+
+parser.add_argument('--nr',
+                    default=None,
+                    type=int,
+                    required=False,
+                    help='RefSeq non-redundant proteins database path')
+
 
 if len(sys.argv) == 1 or sys.argv[1] in ("-h", "--help"):
     parser.print_help()
@@ -102,10 +148,3 @@ input_genome_path = f"{experiment_dir}/{experiment}/{input_genome_name}"
 temp_path = f"{experiment_dir}/{experiment}/Temp"
 result_path = f"{experiment_dir}/{experiment}/Result"
 current_path = os.getcwd()
-
-
-# if not os.path.exists(temp_path):
-# os.mkdir(temp_path)
-
-# if not os.path.exists(result_path):
-# os.mkdir(result_path)
