@@ -14,18 +14,26 @@ def start(
 ):
     # BlastN
     os.system(
-        "makeblastdb -in {input_genome_path} -dbtype nucl -out {temp_path}/blastn_database"
+        f"makeblastdb -in {input_genome_path} -dbtype nucl -out {temp_path}/blastn_database"
     )
 
     header = "qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen"
 
-    os.system(
-        "blastn -query ./{temp_path}/BLASTn_queries.fasta         -out ./{temp_path}/BLASTn_result         -num_threads {num_cpus}         -db ./{temp_path}/blastn_database         -word_size 7         -penalty -3         -reward 2         -gapopen 5         -gapextend 2         -outfmt '6 {header}'       "
-    )
+    # os.system(
+    #   f"blastn -query {temp_path}/BLASTn_queries.fasta -out {temp_path}/BLASTn_result -num_threads {num_cpus} -db ./{temp_path}/blastn_database -word_size 7 -penalty -3 -reward 2 -gapopen 5 -gapextend 2 -outfmt '6 {header}' "
+    # )
 
     df_blastn = pd.read_csv(
         f"{temp_path}/BLASTn_result", sep="\t", header=None)
     df_blastn.columns = header.replace("  ", " ").split(" ")
+
+    df_blastn["Nonconformity"] = (
+        df_blastn["qlen"]
+        - (abs(df_blastn["qend"] - df_blastn["qstart"]) + 1)
+        + df_blastn["gaps"]
+        + df_blastn["mismatch"]
+    )
+    df_blastn = df_blastn[df_blastn["Nonconformity"] <= nonconformity]
 
     # alignment length adjustment
     def blastn_adjust(row):
@@ -40,14 +48,6 @@ def start(
         return row
 
     df_blastn = df_blastn.apply(lambda row: blastn_adjust(row), axis=1)
-
-    df_blastn["Nonconformity"] = (
-        df_blastn["qlen"]
-        - (abs(df_blastn["qend"] - df_blastn["qstart"]) + 1)
-        + df_blastn["gaps"]
-        + df_blastn["mismatch"]
-    )
-    df_blastn = df_blastn[df_blastn["Nonconformity"] <= nonconformity]
 
     # remore redundancy and hold best one base of Nonconformity value
     df_blastn = df_blastn.sort_values(
@@ -129,7 +129,7 @@ def start(
     )
     df["reformated_tag"] = df["tag"].apply(lambda t: reformat(t))
     df[["tag", "reformated_tag", "hit_start", "hit_end"]].to_csv(
-        f"./{temp_path}/hit_index_info.csv"
+        f"{temp_path}/hit_index_info.csv"
     )  # , index=False)
     df["location_tag"] = df.apply(
         lambda row: f">{row['sseqid']}|{row['sign']}|{row['sstart'] + 1}-{row['send']}|{row['hit_start']+1}-{row['hit_end']}",

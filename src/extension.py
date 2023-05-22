@@ -19,9 +19,9 @@ def start(
 ):
     # Extention
     os.system(
-        "bedtools getfasta -fi {input_genome_path} -fo {temp_path}/extended_original.txt -s -bed {temp_path}/extension_index.bed"
+        f"bedtools getfasta -fi {input_genome_path} -fo {temp_path}/extended_original.txt -s -bed {temp_path}/extension_index.bed"
     )
-    os.system("rm input_genome.fna.fai")
+    os.system(f"rm {input_genome_path}.fai")
 
     # Convert hit region to upper case and other region to lower case
     ext = fasta_to_df(f"{temp_path}/extended_original.txt")

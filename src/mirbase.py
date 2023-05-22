@@ -2,10 +2,9 @@ import os
 import pandas as pd
 from utils import fasta_to_df
 
-mirbase_url = "https://www.mirbase.org/ftp/CURRENT"
-
 
 def download(mirbase_dir):
+    mirbase_url = "https://www.mirbase.org/ftp/CURRENT"
     os.system(f"rm -r {mirbase_dir}")
     os.system(f"mkdir -p {mirbase_dir}")
     items = [
@@ -26,7 +25,8 @@ def download(mirbase_dir):
 def select_mirs(mirbase_dir):
     mature = fasta_to_df(f"{mirbase_dir}/mature.fa")
     mature_high_conf = fasta_to_df(f"{mirbase_dir}/mature_high_conf.fa")
-    mature["trim tag"] = mature["tag"].apply(lambda line: " ".join(line.split(" ")[:2]))
+    mature["trim tag"] = mature["tag"].apply(
+        lambda line: " ".join(line.split(" ")[:2]))
     mature["confidence"] = mature["trim tag"].isin(mature_high_conf["tag"])
 
     mature["organism"] = mature["tag"].apply(lambda x: x[:3])
@@ -39,8 +39,9 @@ def select_mirs(mirbase_dir):
     items = list(organism["tree"].unique())
     items.sort(key=len)
 
-    selectedTree = organism[organism["tree"].apply(lambda x: "Viridiplantae;" in x)]
+    selectedTree = organism[organism["tree"].apply(
+        lambda x: "Viridiplantae;" in x)]
     # selectedTree = selectedTree[selectedTree['name'] == ""]
 
     selected = mature[mature["organism"].isin(selectedTree["organism"])]
-    return selected
+    return [selected, mature]

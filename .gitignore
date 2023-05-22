@@ -7,3 +7,6 @@ experiment/
 .env/
 results/
 mxfold2_env/
+software/*
+!software/*.tar.gz
+nr/*

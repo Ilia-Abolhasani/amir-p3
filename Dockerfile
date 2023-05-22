@@ -41,7 +41,7 @@ RUN cd ..
 
 
 # vieena
-RUN wget https://www.tbi.univie.ac.at/RNA/download/ubuntu/ubuntu_20_04/viennarna_2.4.18-1_amd64.deb -O viennarna.deb
+RUN wget https://www.tbi.univie.ac.at/RNA/download/ubuntu/ubuntu_22_04/viennarna_2.5.1-1_amd64.deb -O viennarna.deb
 RUN dpkg -i ./viennarna.deb
 RUN apt-get -f install
 RUN rm viennarna.deb
@@ -54,7 +54,7 @@ RUN rm mxfold2-0.1.1.tar.gz
 # contrafold
 RUN wget http://contra.stanford.edu/contrafold/contrafold_v2_02.tar.gz
 RUN tar -xvzf contrafold_v2_02.tar.gz && rm contrafold_v2_02.tar.gz
-RUN cd contrafold/src
+RUN cd software/contrafold/src
 RUN make clean
 RUN make 
 # to file must changed to be complieable # utility.hpp and optimization.c++ files

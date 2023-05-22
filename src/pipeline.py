@@ -11,14 +11,14 @@ import numpy as np
 import pandas as pd
 from read_configs import *
 import mirbase
-from secondary_structure import secondary_structure
+import secondary_structure
 from utils import *
 from filter import filter_run
 from postprocess import postprocess
 from ct_analizer import get_row
 import blastN
 import extension
-import dimond
+import diamond
 from networkx.algorithms.clique import find_cliques as maximal_cliques
 import networkx
 from subprocess import Popen, PIPE, STDOUT
@@ -30,24 +30,31 @@ from tqdm.notebook import tqdm
 
 
 def start(
-        input_genome_name,
+        input_genome_path,
         experiment,
         experiment_dir,
         mirbase_dir,
         nonconformity,
         flanking_value,
+        folding_temperature,
         seed_start,
         seed_end,
         hit_threshold,
         precursor_threshold,
         boi_threshold,
         num_cpus,
-        secondary_structure_method
+        secondary_structure_method,
+        apply_protein_coding_elimination,
+        protein_coding_elimination_method,
+        diamond_nr_path,
+        diamond_db_path
 ):
-    input_genome_path = f"{experiment_dir}/{experiment}/{input_genome_name}"
-    temp_path = f"{experiment_dir}/{experiment}/Temp"
-    result_path = f"{experiment_dir}/{experiment}/Result"
-    current_path = os.getcwd()
+    experiment_path = f"{experiment_dir}/{experiment}"
+    temp_path = f"{experiment_path}/Temp"
+    result_path = f"{experiment_path}/Result"
+
+    if not os.path.exists(experiment_path):
+        os.mkdir(experiment_path)
 
     if not os.path.exists(temp_path):
         os.mkdir(temp_path)
@@ -58,12 +65,12 @@ def start(
     # download mirbase if not exist
     if not os.path.exists(mirbase_dir):
         mirbase.download(mirbase_dir)
-    selected = mirbase.select_mirs(mirbase_dir)
+    [selected, mature] = mirbase.select_mirs(mirbase_dir)
     df_to_fasta(selected, f"{temp_path}/mature_microRNA_queries.fasta")
 
     # Remove redundant cdhit-est
     os.system(
-        "./software/cdhit/cd-hit-est -i ./{temp_path_f}/mature_microRNA_queries.fasta  -o ./{temp_path_f}/NR_mature_microRNA_queries.fasta     -c 1 -r 0 -G 1 -g 1 -b 30 -l 10 -aL 0 -AL 99999999 -aS 0     -AS 99999999 -s 0 -S 0"
+        f"./software/cdhit/cd-hit-est -i {temp_path}/mature_microRNA_queries.fasta  -o {temp_path}/NR_mature_microRNA_queries.fasta -c 1 -r 0 -G 1 -g 1 -b 30 -l 10 -aL 0 -AL 99999999 -aS 0 -AS 99999999 -s 0 -S 0"
     )
 
     # reformat
@@ -113,14 +120,24 @@ def start(
     extension.start(input_genome_path,
                     temp_path)
 
-    # Dimond
-    dimond.start(temp_path)
-
-    # Secondary structure prediction
-    secondary_structure(secondary_structure_method, result_path, num_cpus)
+    # diamond
+    extended_path = f"{temp_path}/extended_modified.txt"
+    if (apply_protein_coding_elimination):
+        if (protein_coding_elimination_method.name == "diamond"):
+            if (diamond_db_path is None):
+                diamond.make_db(temp_path, diamond_nr_path)
+                diamond_db_path = f"{temp_path}/diamond_output.dmnd"
+            diamond.start(temp_path, diamond_db_path, num_cpus)
+            extended_path = f"{temp_path}/extended_modified_non_coding.txt"
+        # Secondary structure prediction
+    secondary_structure.start(secondary_structure_method.name,
+                              extended_path,
+                              result_path,
+                              folding_temperature,
+                              num_cpus)
 
     # CTAnalizer
-    base = f"{result_path}/secondary_structure/{secondary_structure_method}/"
+    base = f"{result_path}/secondary_structure/{secondary_structure_method.name}/"
     df = fasta_to_df(f"{temp_path}/extended_modified_non_coding.txt")
     index_list = []
     for index, row in df.iterrows():
