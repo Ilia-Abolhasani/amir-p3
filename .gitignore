@@ -8,5 +8,7 @@ experiment/
 results/
 mxfold2_env/
 software/
+software/cdhit/
+software/contrafold/
 !software/*.tar.gz
 nr/*
