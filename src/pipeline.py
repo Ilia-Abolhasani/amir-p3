@@ -24,9 +24,21 @@ import networkx
 from subprocess import Popen, PIPE, STDOUT
 import urllib.parse
 import multiprocessing as mp
+import functools
 
 from tqdm.contrib.concurrent import process_map
-from tqdm.notebook import tqdm
+from tqdm import tqdm
+
+
+def _get_df_by_tag(tag, base, extra=0):
+    def run(tag, path, extra):
+        try:
+            return get_row(tag, path, extra)
+        except Exception as e:
+            print(str(e), tag)
+            return pd.Series()
+    ct_files = glob.glob(f"{base}{reformat(tag)}/*.ct")
+    return pd.Series(ct_files).apply(lambda path: run(tag, path, extra))
 
 
 def start(
@@ -130,12 +142,13 @@ def start(
             diamond.start(temp_path, diamond_db_path, num_cpus)
             extended_path = f"{temp_path}/extended_modified_non_coding.txt"
         # Secondary structure prediction
+    '''
     secondary_structure.start(secondary_structure_method.name,
                               extended_path,
                               result_path,
                               folding_temperature,
                               num_cpus)
-
+    '''
     # CTAnalizer
     base = f"{result_path}/secondary_structure/{secondary_structure_method.name}/"
     df = fasta_to_df(f"{temp_path}/extended_modified_non_coding.txt")
@@ -146,17 +159,6 @@ def start(
             index_list.append(index)
     df = df.iloc[index_list, :]
     print(df.shape)
-
-    def run(tag, path, extra):
-        try:
-            return get_row(tag, path, extra)
-        except Exception as e:
-            print(str(e), tag)
-            return pd.Series()
-
-    def get_df_by_tag(tag, extra=0):
-        ct_files = glob.glob(f"{base}{reformat(tag)}/*.ct")
-        return pd.Series(ct_files).apply(lambda path: run(tag, path, extra))
 
     # Apply on current data
     seq2cluster = pd.read_csv(f"{temp_path}/seq2cluster.csv")
@@ -198,9 +200,10 @@ def start(
     rcols = [*rcols_ref, *rcols_boi]
 
     rcols_dg = [*rcols, "delta G"]
+    repeted = {}
+    repeted_boi = {}
 
     def selection(row):
-        global repeted
         tuple_row = tuple(row)
         if tuple_row not in repeted:
             repeted[tuple_row] = row.name
@@ -208,7 +211,6 @@ def start(
         return False
 
     def boi_selection(row):
-        global repeted_boi
         tuple_row_boi = tuple(row[rcols_boi])
         dg = row["delta G"]
         if tuple_row_boi not in repeted_boi:
@@ -230,20 +232,16 @@ def start(
                 row["Reference miRNA IDs and species"]
             repeted_boi[tuple_row_boi] = value
 
-    os.system("rm {result_path}/ct_analizer.csv")
+    os.system(f"rm {result_path}/ct_analizer.csv")
     chunksize = 1 * (10**4)
-    max_workers = mp.cpu_count() - 4
-    num_terminal = 5  # acceptable_terminal_structures
 
-    repeted = {}
-    repeted_boi = {}
     header = True
     orders = None
     arr = np.array_split(df["tag"], max(df["tag"].shape[0] // chunksize, 1))
     for chunk in tqdm(arr):
         dfs = []
         for row in process_map(
-            get_df_by_tag, chunk, tqdm_class=tqdm, max_workers=max_workers, chunksize=5
+            functools.partial(_get_df_by_tag, base=base, extra=0), chunk, max_workers=num_cpus, chunksize=5
         ):
             dfs.append(row)
         chunk = pd.concat(dfs, axis=0)
@@ -275,7 +273,6 @@ def start(
     os.system("rm {result_path}/ct_analizer_clustered.csv")
 
     def isKeepCluster(row):
-        global repeted_boi
         dg = row["delta G"]
         if row["boi name"] == "-":
             return False
@@ -316,8 +313,8 @@ def start(
         header = False
 
     # Filters
-    os.system("rm {result_path}/result_level1_filter.csv")
-    filter1_run(
+    os.system(f"rm {result_path}/result_level1_filter.csv")
+    filter_run(
         input_file=f"{result_path}/ct_analizer_clustered.csv",
         output_file=f"{result_path}/result_level1_filter.csv",
     )
@@ -356,7 +353,7 @@ def start(
         "border_line_structure_allowance": "NOT ACCEPTED",
     }
 
-    filter2(
+    postprocess(
         input_file=f"{result_path}/result_level1_filter.csv",
         output_file=f"{result_path}/result_level2_filter.csv",
         config=config,
@@ -410,7 +407,6 @@ def start(
     same_strand_hit = {}
 
     def same_strand(row):
-        global same_strand_hit
         chrom = row["chromosome"]
         sign = row["sign"]
         hit = row["hit position on chromosome"]
@@ -435,7 +431,6 @@ def start(
     same_strand_boi = {}
 
     def same_strand(row):
-        global same_strand_boi
         seq = row["boi seq"].lower()
         name = row["boi name"]
         dotbracket = row["boi dotbracket"].lower()
@@ -473,7 +468,6 @@ def start(
     rcols_pre = ["precursor seq", "precursor name", "precursor dotbracket"]
 
     def same_strand(row):
-        global same_strand_precursor
         seq = row["precursor seq"].lower()
         name = row["precursor name"]
         dotbracket = row["precursor dotbracket"].lower()
@@ -523,16 +517,16 @@ def start(
     result.to_csv(
         f"{result_path}/result_level2_filter_clustered.csv", index=False)
     os.system(
-        "zip -r {result_path}/result_level2_filter_clustered.zip {result_path}/result_level2_filter_clustered.csv"
+        f"zip -r {result_path}/result_level2_filter_clustered.zip {result_path}/result_level2_filter_clustered.csv"
     )
 
     # BlastX
-    os.system("makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database")
-    os.ipython().system(
-        'blastx -query ./input_blastx.txt         -db ./NR/nr_database         -out ./Temp/BlastX/blastx         -num_threads 20         -evalue 1e-3         -outfmt "6 qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids"'
-    )
-    blx = pd.read_csv("./Temp/BlastX/blastx", sep="\t", header=None)
-    blx.columns = "qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids".split(
-        " "
-    )
-    coding_seq = blx["qseqid"].unique()
+    # os.system("makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database")
+    # os.ipython().system(
+    # 'blastx -query ./input_blastx.txt         -db ./NR/nr_database         -out ./Temp/BlastX/blastx         -num_threads 20         -evalue 1e-3         -outfmt "6 qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids"'
+    # )
+    # blx = pd.read_csv("./Temp/BlastX/blastx", sep="\t", header=None)
+    # blx.columns = "qseqid sseqid qstart qend evalue bitscore score length frames qframe qcovs qcovhsp staxids".split(
+    # " "
+    # )
+    # coding_seq = blx["qseqid"].unique()

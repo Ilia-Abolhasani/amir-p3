@@ -939,8 +939,8 @@ def get_dg_by_unafold(nucleotide, index, values):
     ct_str = f"{len(nucleotide)}\n"
     for i in range(0, len(nucleotide)):
         ct_str += f"     {i+1} {nucleotide[i]}      {i}      {i+2}      {values[i]}       {index[i]}\n"
-    process = Popen(["ct-energy", "-t", "22"],
-                    stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+    process = Popen(["ct-energy", "-t", "22"], 
+                    stdout=PIPE, stdin=PIPE, stderr=STDOUT) # todo
     (output, err) = process.communicate(input=bytes(ct_str, "ascii"))
     exit_code = process.wait()
     if err:
@@ -1026,7 +1026,7 @@ def check_involvement(row):
     return True
 
 
-server_url = "http://jupyter.sysmanager.ir/tree/plant_microRNA_prediction"
+server_url = os.getcwd()
 # MCMA: maximum consecutive mismatch allowance
 
 

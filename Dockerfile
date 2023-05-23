@@ -39,6 +39,12 @@ RUN make
 RUN make install
 RUN cd ..
 
+# unafold
+RUN cd ./software/unafold-3.7
+RUN ./configure
+RUN make
+RUN make install
+RUN cd ..
 
 # vieena
 RUN wget https://www.tbi.univie.ac.at/RNA/download/ubuntu/ubuntu_22_04/viennarna_2.5.1-1_amd64.deb -O viennarna.deb
