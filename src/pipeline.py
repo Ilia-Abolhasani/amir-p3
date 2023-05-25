@@ -7,6 +7,7 @@ import glob
 import math
 import shutil
 import argparse
+import pickle
 import numpy as np
 import pandas as pd
 from read_configs import *
@@ -25,6 +26,9 @@ from subprocess import Popen, PIPE, STDOUT
 import urllib.parse
 import multiprocessing as mp
 import functools
+from convertor import convert
+from preprocessing import preprocessing
+from keras.models import load_model
 
 from tqdm.contrib.concurrent import process_map
 from tqdm import tqdm
@@ -59,7 +63,8 @@ def start(
         apply_protein_coding_elimination,
         protein_coding_elimination_method,
         diamond_nr_path,
-        diamond_db_path
+        diamond_db_path,
+        classifier_threshold=0.9
 ):
     experiment_path = f"{experiment_dir}/{experiment}"
     temp_path = f"{experiment_path}/Temp"
@@ -142,13 +147,11 @@ def start(
             diamond.start(temp_path, diamond_db_path, num_cpus)
             extended_path = f"{temp_path}/extended_modified_non_coding.txt"
         # Secondary structure prediction
-    '''
     secondary_structure.start(secondary_structure_method.name,
                               extended_path,
                               result_path,
                               folding_temperature,
                               num_cpus)
-    '''
     # CTAnalizer
     base = f"{result_path}/secondary_structure/{secondary_structure_method.name}/"
     df = fasta_to_df(f"{temp_path}/extended_modified_non_coding.txt")
@@ -270,7 +273,7 @@ def start(
                      header=header, mode="a", index=False)
         header = False
 
-    os.system("rm {result_path}/ct_analizer_clustered.csv")
+    os.system(f"rm {result_path}/ct_analizer_clustered.csv")
 
     def isKeepCluster(row):
         dg = row["delta G"]
@@ -319,50 +322,44 @@ def start(
         output_file=f"{result_path}/result_level1_filter.csv",
     )
 
-    config = {
-        "delta_g_min": -999,
-        "delta_g_max": 1,
-        "hit_len_min": 21,
-        "hit_len_max": 21,
-        "hit_complementarity_percentage_min": 0.5,
-        "hit_complementarity_percentage_max": 1.0,
-        "number_of_terminal_structure_min": 0,
-        "number_of_terminal_structure_max": 5,
-        "boi_gc_content_min": 45,
-        "boi_gc_content_max": 94,
-        "num_of_linking_residues_min": 5,
-        "num_of_linking_residues_max": 159,
-        "hit_gc_content_percentage_min": 37,
-        "hit_gc_content_percentage_max": 86,
-        "precursor_mfei_min": 0.87,
-        "precursor_mfei_max": 1.3695556794836854,
-        "border_line_mismatch_max": 0,
-        "border_line_bulge_max": 0,
-        "border_line_internal_max": 0,
-        "total_num_of_nonmatching_positions": 5,
-        "total_num_of_mismached_positions": 5,
-        "total_num_of_positions_in_bulges_and_loops": 2,
-        "max_allowed_mismatch_size_in_hit_region": 2,
-        "max_allowed_bulge_size_in_hit_region": 1,
-        "max_allowed_internal_loop_size_in_hit_region": 3,
-        "max_allowed_hsbl_ssbl_size": 2,
-        "minimum_required_clear_region": 0,
-        "acceptable_num_for_hit_locations_in_bulges_or_loops": 2,
-        "acceptable_num_for_unmatched_locations_in_hit_region": 5,
-        "delete_if_mature_duplex_involvement_in_apical_loop": "YES",
-        "border_line_structure_allowance": "NOT ACCEPTED",
-    }
+    # deep learning
+    with open('./data/classifier/mu.pickle', 'rb') as handle:
+        mu = pickle.load(handle)
+    with open('./data/classifier/std.pickle', 'rb') as handle:
+        std = pickle.load(handle)
+    filter1 = pd.read_csv(f"{result_path}/result_level1_filter.csv")
+    filter1 = convert(filter1)
+    [feature, _, _] = preprocessing(filter1, mu, std)
+    model = load_model('./data/classifier/model.h5')
+    pred = model.predict(feature)
+    pred = pd.DataFrame(pred)[1]
+    filter1['pred'] = pred
+    candidates = filter1[filter1['pred'] > classifier_threshold]
+    candidates = candidates.reset_index(drop=True)
+    print(candidates.shape)
+    print(len(candidates['hit seq'].unique()))
+    candidates.to_csv(f"{result_path}/candidates.csv", index=False)
 
     postprocess(
-        input_file=f"{result_path}/result_level1_filter.csv",
-        output_file=f"{result_path}/result_level2_filter.csv",
-        config=config,
+        input_file=f"{result_path}/candidates.csv",
+        output_file=f"{result_path}/candidates_postprocessed.csv"
     )
-
+    candidates = pd.read_csv(
+        f"{result_path}/candidates_postprocessed.csv")
+    print(candidates.shape)
+    len(candidates['hit seq'].unique())
     # Cluster JSC
     result = pd.read_csv(f"{result_path}/result_level2_filter.csv")
     print(result.shape)
     result.head(2)
+    candidates = pd.read_csv(f"./{result_path}/candidates.csv")
+    candidates_post = pd.read_csv(
+        f"{result_path}/candidates_postprocessed.csv")
+    a = candidates['seq name'] + candidates['ct name']
+    b = candidates_post['seq name'] + candidates_post['ct name']
+    candidates[~a.isin(b)].to_csv(
+        f"{result_path}/candidates_rejected_in_postprocessed.csv", index=False)
+    result = candidates_post
 
     def jaccard(A, B):
         a1 = int(A.split("-")[0])
@@ -520,6 +517,9 @@ def start(
         f"zip -r {result_path}/result_level2_filter_clustered.zip {result_path}/result_level2_filter_clustered.csv"
     )
 
+    result = pd.read_csv(
+        f"{result_path}/candidates_postprocessed_clustered.csv")
+    result = result.sort_values('pred', ascending=False)
     # BlastX
     # os.system("makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database")
     # os.ipython().system(

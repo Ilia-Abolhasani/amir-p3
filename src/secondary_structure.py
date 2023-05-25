@@ -59,10 +59,9 @@ def _mxfold2(extended_path, result_path, folding_temperature,  num_cpus):
 
     df = fasta_to_df(f"{result_path}/secondary_structure/mxfold2_result.txt")
     df = df.apply(lambda row: _bracket_row(row), axis=1)
-    df.head(2)
     base = f"{result_path}/secondary_structure/mxfold2/"
-    os.system("rm -r {base}")
-    os.system("mkdir -p {base}")
+    os.system(f"rm -r {base}")
+    os.system(f"mkdir -p {base}")
     for index, row in df.iterrows():
         if not os.path.exists(base + reformat(row["tag"])):
             os.makedirs(base + reformat(row["tag"]))

@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 LABEL version="1.0.0"
 
-WORKDIR /AmiRML_p/
+WORKDIR /amir-p3
 
 RUN apt-get update
 RUN apt-get install -y autoconf
@@ -18,52 +18,40 @@ RUN apt-get install -y wget
 RUN apt-get install -y ncbi-blast+
 RUN apt-get install -y bedtools
 RUN apt-get install -y texlive-font-utils
+RUN apt-get install -y build-essential
+RUN apt-get install -y python3-pip
 
 
-#diamond
-RUN mkdir diamond 
-RUN cd diamond     
-RUN wget http://github.com/bbuchfink/diamond/releases/download/v0.9.24/diamond-linux64.tar.gz 
-RUN tar -xzf diamond-linux64.tar.gz 
-RUN rm diamond-linux64.tar.gz diamond_manual.pdf 
-RUN cd ..
+COPY ./data /amir-p3/data
+COPY ./config /amir-p3/config
+COPY ./software /amir-p3/software
+COPY ./requirements.txt /amir-p3/
 
-
-# mfold
-RUN wget http://www.unafold.org/download/mfold-3.6.tar.gz
-RUN tar -xvf mfold-3.6.tar.gz
-#RUN rm mfold-3.6.tar.gz
-RUN cd mfold-3.6
-RUN ./configure
-RUN make
-RUN make install
-RUN cd ..
+WORKDIR /amir-p3/software
+RUN find . -type f -wholename '*.tar.gz' -exec sh -c 'tar -xzvf {} && rm {}' \;
 
 # unafold
-RUN cd ./software/unafold-3.7
-RUN ./configure
-RUN make
-RUN make install
-RUN cd ..
+RUN cd ./unafold-3.7 && ./configure && make && make install
 
-# vieena
-RUN wget https://www.tbi.univie.ac.at/RNA/download/ubuntu/ubuntu_22_04/viennarna_2.5.1-1_amd64.deb -O viennarna.deb
-RUN dpkg -i ./viennarna.deb
-RUN apt-get -f install
-RUN rm viennarna.deb
+# mfold
+RUN cd ./mfold-3.6 && ./configure && make && make install
+
+# contrafold
+RUN cd ./contrafold/src && make clean && make
 
 # mxfold
 RUN wget https://github.com/keio-bioinformatics/mxfold2/releases/download/v0.1.1/mxfold2-0.1.1.tar.gz
 RUN pip3 install mxfold2-0.1.1.tar.gz
 RUN rm mxfold2-0.1.1.tar.gz
 
-# contrafold
-RUN wget http://contra.stanford.edu/contrafold/contrafold_v2_02.tar.gz
-RUN tar -xvzf contrafold_v2_02.tar.gz && rm contrafold_v2_02.tar.gz
-RUN cd software/contrafold/src
-RUN make clean
-RUN make 
-# to file must changed to be complieable # utility.hpp and optimization.c++ files
+
+# vieena
+RUN wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_5_x/ViennaRNA-2.5.1.tar.gz
+RUN tar -xzvf ViennaRNA-2.5.1.tar.gz && rm ViennaRNA-2.5.1.tar.gz 
+RUN cd ./ViennaRNA-2.5.1 && ./configure && make && make install
 
 
-WORKDIR /AmiRML_p/
+COPY ./src /amir-p3/src
+RUN pip3 install ./requirements.txt
+
+WORKDIR /amir-p3

@@ -19,6 +19,7 @@ def start(
 
     header = "qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen"
 
+    # todo
     # os.system(
     #   f"blastn -query {temp_path}/BLASTn_queries.fasta -out {temp_path}/BLASTn_result -num_threads {num_cpus} -db ./{temp_path}/blastn_database -word_size 7 -penalty -3 -reward 2 -gapopen 5 -gapextend 2 -outfmt '6 {header}' "
     # )
