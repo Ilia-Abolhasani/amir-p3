@@ -40,9 +40,9 @@ RUN cd ./mfold-3.6 && ./configure && make && make install
 RUN cd ./contrafold/src && make clean && make
 
 # mxfold
-RUN wget https://github.com/keio-bioinformatics/mxfold2/releases/download/v0.1.1/mxfold2-0.1.1.tar.gz
-RUN pip3 install mxfold2-0.1.1.tar.gz
-RUN rm mxfold2-0.1.1.tar.gz
+# RUN wget https://github.com/keio-bioinformatics/mxfold2/releases/download/v0.1.1/mxfold2-0.1.1.tar.gz
+# RUN pip3 install mxfold2-0.1.1.tar.gz
+# RUN rm mxfold2-0.1.1.tar.gz
 
 
 # vieena
@@ -51,7 +51,7 @@ RUN tar -xzvf ViennaRNA-2.5.1.tar.gz && rm ViennaRNA-2.5.1.tar.gz
 RUN cd ./ViennaRNA-2.5.1 && ./configure && make && make install
 
 
-COPY ./src /amir-p3/src
 RUN pip3 install ./requirements.txt
+COPY ./src /amir-p3/src
 
 WORKDIR /amir-p3

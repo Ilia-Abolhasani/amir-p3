@@ -40,8 +40,8 @@ def tnf_calc(dna):
     dna = dna.replace("N", "")
     counter = 0
     out = _tnf.copy()
-    for i in range(0, len(dna) - (k - 1)):        
-        kmer = dna[i: i + k]        
+    for i in range(0, len(dna) - (k - 1)):
+        kmer = dna[i: i + k]
         if kmer in out:
             out[kmer] += 1
         else:
@@ -110,7 +110,7 @@ def get_sum_in_region(row, type_str, size_str, region):
     return out
 
 
-def preprocessing(df, mu=None, std=None, make_standard=True):    
+def preprocessing(df, mu=None, std=None, make_standard=True):
     result = df.copy()
     result = result.reset_index(drop=True)
 
@@ -231,7 +231,7 @@ def preprocessing(df, mu=None, std=None, make_standard=True):
     if mu is None or std is None:
         mu = X.mean()
         std = X.std()
-    if(make_standard):
+    if (make_standard):
         X = (X - mu) / std
     # mir type
     encoder = OneHotEncoder(handle_unknown="ignore")
@@ -262,8 +262,8 @@ def preprocessing(df, mu=None, std=None, make_standard=True):
     for c in ["-3", "-2", "-1", "", "+1", "+2"]:
         cols.append(f"connectivity hit start{c}")
         cols.append(f"connectivity hit end{c}")
-    #for c in range(2,13):
-        #cols.append(f"seed connectivity{c}")
+    # for c in range(2,13):
+        # cols.append(f"seed connectivity{c}")
     X = X.join(result[cols])
     X = X.astype("float32")
     return [X, mu, std]
