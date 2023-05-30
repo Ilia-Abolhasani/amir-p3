@@ -51,7 +51,18 @@ RUN tar -xzvf ViennaRNA-2.5.1.tar.gz && rm ViennaRNA-2.5.1.tar.gz
 RUN cd ./ViennaRNA-2.5.1 && ./configure && make && make install
 
 
-RUN pip3 install ./requirements.txt
-COPY ./src /amir-p3/src
-
 WORKDIR /amir-p3
+
+RUN pip3 install numpy==1.24.3
+RUN pip3 install pandas==1.3.3
+RUN pip3 install tqdm==4.62.3
+RUN pip3 install urllib3==1.25.8
+RUN pip3 install sklearn==0.0
+RUN pip3 install networkx==2.5.1
+RUN pip3 install seaborn==0.10.1
+RUN pip3 install matplotlib==3.7.1
+RUN pip3 install tensorflow-cpu==2.12.0
+RUN pip3 install keras==2.12.0
+
+COPY ./src /amir-p3/src
+RUN mkdir experiment
