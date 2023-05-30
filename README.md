@@ -26,13 +26,23 @@ To use AmiR-P3, it is recommended to use the provided Docker image. The Docker i
 2. Pull the AmiR-P3 Docker image from Docker Hub by running the following command:
 
    ```shell
-   docker pull docker.com/amir-p3
+      docker pull micrornaproject/amir-p3
+   ```
 3. Once the image is downloaded, you can run the AmiR-P3 pipeline using the following command:
    ```shell
-   docker run -v /path/to/input:/data -v /path/to/output:/output docker.com/amir-p3 python3 amiR-P3.py -i /data/input_sequence.fasta -o /output/predicted_miRNAs.fasta
+      docker run -v /path/to/input:/data -v /path/to/output:/output docker.com/amir-p3 python3 amiR-P3.py -i /data/input_sequence.fasta -o /output/predicted_miRNAs.fasta
+   ```
+   Make sure to replace /path/to/input and /path/to/output with the actual paths to your input sequence file and desired output directory, respectively. The input_sequence.fasta should contain the genomic sequence(s) from which you want to predict miRNAs.
    
-  Make sure to replace /path/to/input and /path/to/output with the actual paths to your input sequence file and desired output directory, respectively. The input_sequence.fasta should contain the genomic sequence(s) from which you want to predict miRNAs.
-  
+   Alternatively, you can connect to the AmiR-P3 Docker container in interactive mode, which allows you to manually execute commands and interact with the pipeline. Follow the instructions below to use the interactive mode:
+   
+   ```shell
+   sudo docker run -it micrornaproject/amir-p3:latest /bin/bash   
+   ```
+   ```shell
+   # Run the AmiR-P3 pipeline inside the Docker container
+   python3 amiR-P3.py --input ./data/example/example_genome.fasta --experiment test
+   ```
 4. AmiR-P3 will generate the predicted miRNAs in the specified output directory.
 
 Note: The Docker image contains all the necessary software, except for mxfold2, which needs to be manually installed if selected as the second structure prediction software. To install mxfold2 manually, follow these steps:
