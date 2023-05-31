@@ -100,7 +100,7 @@ AmiR-P3 is released under the Creative Commons Attribution-NonCommercial-ShareAl
 
 This means that you are free to use, share, and adapt AmiR-P3 for non-commercial purposes, as long as you provide attribution, use the same license for any modifications, and do not use it for commercial purposes.
 
-To view a copy of the license, please visit [License](LICENSE).
+To view a copy of the license, please visit [License](LICENSE.md).
 
 If you are interested in using AmiR-P3 for commercial purposes, please contact us for further licensing options.
 
