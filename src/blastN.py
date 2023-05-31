@@ -21,7 +21,7 @@ def start(
 
     # todo
     os.system(
-        f"blastn -query {temp_path}/BLASTn_queries.fasta -out {temp_path}/BLASTn_result -num_threads {num_cpus} -db ./{temp_path}/blastn_database -word_size 7 -penalty -3 -reward 2 -gapopen 5 -gapextend 2 -outfmt '6 {header}' "
+        f"blastn -query {temp_path}/BLASTn_queries.fasta -out {temp_path}/BLASTn_result -num_threads {num_cpus} -db {temp_path}/blastn_database -word_size 7 -penalty -3 -reward 2 -gapopen 5 -gapextend 2 -outfmt '6 {header}' "
     )
 
     df_blastn = pd.read_csv(

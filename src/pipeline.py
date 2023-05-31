@@ -154,7 +154,7 @@ def start(
                               num_cpus)
     # CTAnalizer
     base = f"{result_path}/secondary_structure/{secondary_structure_method.name}/"
-    df = fasta_to_df(f"{temp_path}/extended_modified_non_coding.txt")
+    df = fasta_to_df(extended_path)
     index_list = []
     for index, row in df.iterrows():
         tag = reformat(row["tag"])
@@ -349,9 +349,6 @@ def start(
     print(candidates.shape)
     len(candidates['hit seq'].unique())
     # Cluster JSC
-    result = pd.read_csv(f"{result_path}/result_level2_filter.csv")
-    print(result.shape)
-    result.head(2)
     candidates = pd.read_csv(f"./{result_path}/candidates.csv")
     candidates_post = pd.read_csv(
         f"{result_path}/candidates_postprocessed.csv")
@@ -512,14 +509,8 @@ def start(
     )
 
     result.to_csv(
-        f"{result_path}/result_level2_filter_clustered.csv", index=False)
-    os.system(
-        f"zip -r {result_path}/result_level2_filter_clustered.zip {result_path}/result_level2_filter_clustered.csv"
-    )
-
-    result = pd.read_csv(
-        f"{result_path}/candidates_postprocessed_clustered.csv")
-    result = result.sort_values('pred', ascending=False)
+        f"{result_path}/candidates_postprocessed_clustered.csv", index=False)
+    print("Finished.")
     # BlastX
     # os.system("makeblastdb -in ./NR/nr -dbtype prot -out ./NR/nr_database")
     # os.ipython().system(

@@ -66,7 +66,7 @@ parser.add_argument('--fv',
 
 
 parser.add_argument('--ssm',
-                    default=SecondaryStructure.viennarna,
+                    default=SecondaryStructure.mfold,
                     type=SecondaryStructure,
                     choices=list(SecondaryStructure),
                     required=False,

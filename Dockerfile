@@ -1,5 +1,5 @@
 FROM ubuntu:22.04
-LABEL version="1.0.0"
+LABEL version="1.0.2"
 
 WORKDIR /amir-p3
 
@@ -20,12 +20,9 @@ RUN apt-get install -y bedtools
 RUN apt-get install -y texlive-font-utils
 RUN apt-get install -y build-essential
 RUN apt-get install -y python3-pip
+RUN apt-get install -y gfortran
 
-
-COPY ./data /amir-p3/data
-COPY ./config /amir-p3/config
 COPY ./software /amir-p3/software
-COPY ./requirements.txt /amir-p3/
 
 WORKDIR /amir-p3/software
 RUN find . -type f -wholename '*.tar.gz' -exec sh -c 'tar -xzvf {} && rm {}' \;
@@ -64,5 +61,7 @@ RUN pip3 install matplotlib==3.7.1
 RUN pip3 install tensorflow-cpu==2.12.0
 RUN pip3 install keras==2.12.0
 
+COPY ./data /amir-p3/data
+COPY ./config /amir-p3/config
 COPY ./src /amir-p3/src
 RUN mkdir experiment

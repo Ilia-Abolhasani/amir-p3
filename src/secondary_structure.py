@@ -28,6 +28,7 @@ def _run_mfold(tag, current_path, base, folding_temperature, remove_extra_files)
         os.system(
             '''find . -name "SEQ*" -not -name "*.ct" -not -name "*.pdf" -not -name "*SEQ.FASTA" -not -type d -delete'''
         )
+    os.system("rm SEQ.ct")
     os.chdir(f"{current_path}")
 
 
@@ -44,7 +45,8 @@ def _mfold(extended_path, result_path, folding_temperature,  num_cpus, remove_ex
             os.makedirs(base + tag)
         with open(base + f"{tag}/SEQ.FASTA", "w") as file:
             file.write(f">{row['tag']}\n{row['data']}")
-
+            print(len(row['data']))
+    input("wait....")
     if __name__ == 'secondary_structure':
         pool = mp.Pool(num_cpus)
         pool.map(functools.partial(_run_mfold, current_path=current_path, base=base,
@@ -163,6 +165,8 @@ def _contrafold(extended_path, result_path, folding_temperature,  num_cpus):
 
 
 def start(method, extended_path, result_path, folding_temperature,  num_cpus):
+    print("Starting secondary structure prediction...")
+    print("Please wait, as this process may take a while...")
     method = method.lower()
     if method == "mfold":
         _mfold(extended_path, result_path, folding_temperature,  num_cpus)
@@ -174,3 +178,4 @@ def start(method, extended_path, result_path, folding_temperature,  num_cpus):
         _mxfold2(extended_path, result_path, folding_temperature,  num_cpus)
     else:
         raise Exception('Error, unrecognized secondary structure method.')
+    print("Secondary structure prediction completed.")

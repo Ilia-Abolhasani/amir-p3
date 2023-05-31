@@ -236,7 +236,7 @@ def postprocess(input_file, output_file, config=None, chunksize=10**5):
     if os.path.exists(output_file):
         os.remove(output_file)
     if config is None:  # read from filter_level2.json
-        with open(os.path.dirname(__file__) + "/config/filter_postprocess.json") as json_file:
+        with open(os.path.dirname(__file__) + "/../config/filter_postprocess.json") as json_file:
             config = json.load(json_file)
     config = DotDict(config)
 
