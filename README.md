@@ -96,8 +96,13 @@ Please note that some arguments have default values and are not required. Howeve
 If you use AmiR-P3 in your research or find it useful, please consider citing: []
 
 ## License
+AmiR-P3 is released under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC-BY-NC-SA 4.0).
 
-AmiR-P3 is released under the [MIT License](LICENSE).
+This means that you are free to use, share, and adapt AmiR-P3 for non-commercial purposes, as long as you provide attribution, use the same license for any modifications, and do not use it for commercial purposes.
+
+To view a copy of the license, please visit [License](LICENSE).
+
+If you are interested in using AmiR-P3 for commercial purposes, please contact us for further licensing options.
 
 ## Contact Information
 
