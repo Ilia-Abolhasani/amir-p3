@@ -1,4 +1,4 @@
-# AmiR-P3: Ab Initio Plant miRNA Prediction Pipeline
+# AmiR-P3: An AI-based microRNA prediction pipeline in plants
 
 AmiR-P3 is a powerful ab initio plant miRNA prediction pipeline written in Python 3. It leverages various computational techniques and integrates several tools to predict putative miRNAs from genomic or transcriptomic sequences in plants.
 
