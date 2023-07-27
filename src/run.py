@@ -81,18 +81,24 @@ parser.add_argument('--ft',
 
 
 parser.add_argument('--ss',
-                    default=2,
+                    default=9,
                     type=int,
                     required=False,
                     help='Start seed position.')
 
 
 parser.add_argument('--se',
-                    default=13,
+                    default=11,
                     type=int,
                     required=False,
                     help='End seed position.')
 
+
+parser.add_argument('--dsr',
+                    default=True,
+                    type=bool,
+                    required=False,
+                    help='Drop sequence if seed region has mismatches.')
 
 parser.add_argument('--ht',
                     default=0.8,
@@ -160,6 +166,7 @@ pipeline.start(
     folding_temperature=args.ft,
     seed_start=args.ss,
     seed_end=args.se,
+    drop_seed_region=args.dsr,
     hit_threshold=args.ht,
     precursor_threshold=args.pt,
     boi_threshold=args.bt,

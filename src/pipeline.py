@@ -55,6 +55,7 @@ def start(
         folding_temperature,
         seed_start,
         seed_end,
+        drop_seed_region,
         hit_threshold,
         precursor_threshold,
         boi_threshold,
@@ -131,7 +132,10 @@ def start(
     blastN.start(input_genome_path,
                  temp_path,
                  nonconformity,
-                 flanking_value,
+                 flanking_value,                 
+                 seed_start,
+                 seed_end,
+                 drop_seed_region,
                  num_cpus)
     # Extention with bed tools
     extension.start(input_genome_path,

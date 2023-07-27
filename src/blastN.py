@@ -10,6 +10,9 @@ def start(
     temp_path,
     nonconformity,
     flanking_value,
+    seed_start,
+    seed_end,
+    drop_seed_region,
     num_cpus
 ):
     # BlastN
@@ -20,14 +23,25 @@ def start(
     header = "qseqid sseqid qstart qend sstart send qseq sseq evalue bitscore score length pident nident mismatch positive gapopen gaps ppos frames qframe sframe sstrand qcovs qcovhsp qlen slen"
 
     # todo
-    os.system(
-        f"blastn -query {temp_path}/BLASTn_queries.fasta -out {temp_path}/BLASTn_result -num_threads {num_cpus} -db {temp_path}/blastn_database -word_size 7 -penalty -3 -reward 2 -gapopen 5 -gapextend 2 -outfmt '6 {header}' "
-    )
+    # os.system(
+    # f"blastn -query {temp_path}/BLASTn_queries.fasta -out {temp_path}/BLASTn_result -num_threads {num_cpus} -db {temp_path}/blastn_database -word_size 7 -penalty -3 -reward 2 -gapopen 5 -gapextend 2 -outfmt '6 {header}' "
+    # )
 
     df_blastn = pd.read_csv(
         f"{temp_path}/BLASTn_result", sep="\t", header=None)
     df_blastn.columns = header.replace("  ", " ").split(" ")
-
+    #
+    if (drop_seed_region):
+        def no_missmatch(qstart, qseq, sseq):
+            start_index = seed_start - qstart
+            end_index = seed_end - qstart + 1
+            seq1 = qseq[start_index:end_index]
+            seq2 = sseq[start_index:end_index]
+            return seq1 == seq2
+        indexes = df_blastn[["qstart", "qseq", "sseq"]].apply(
+            lambda row: no_missmatch(row["qstart"], row["qseq"], row["sseq"]), axis=1)
+        df_blastn = df_blastn[indexes].reset_index(drop=True)
+    #
     df_blastn["Nonconformity"] = (
         df_blastn["qlen"]
         - (abs(df_blastn["qend"] - df_blastn["qstart"]) + 1)
