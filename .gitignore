@@ -12,3 +12,4 @@ software/cdhit/
 software/contrafold/
 !software/*.tar.gz
 nr/*
+data/rfam/
