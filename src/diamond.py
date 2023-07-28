@@ -30,7 +30,7 @@ def start(temp_path, diamond_db_path, num_cpus):
 
     coding_seq = pd.Series(coding_seq).apply(lambda x: clear(x))
 
-    ext = fasta_to_df(f"{temp_path}/extended_modified.txt")
+    ext = fasta_to_df(f"{temp_path}/extended_modified_rfam.txt")
     print(f"total:      {ext.shape[0]}")
     non_coding = ext[~ext["tag"].isin(coding_seq)]
     print(f"non_coding: {non_coding.shape[0]}")

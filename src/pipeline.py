@@ -18,6 +18,7 @@ from filter import filter_run
 from postprocess import postprocess
 from ct_analizer import get_row
 import blastN
+import rfam
 import extension
 import diamond
 from networkx.algorithms.clique import find_cliques as maximal_cliques
@@ -132,7 +133,7 @@ def start(
     blastN.start(input_genome_path,
                  temp_path,
                  nonconformity,
-                 flanking_value,                 
+                 flanking_value,
                  seed_start,
                  seed_end,
                  drop_seed_region,
@@ -141,8 +142,14 @@ def start(
     extension.start(input_genome_path,
                     temp_path)
 
+    # Rfam
+    rfam.start(f"{temp_path}/extended_modified.txt",
+               temp_path,
+               10**-10,
+               num_cpus,)
+
     # diamond
-    extended_path = f"{temp_path}/extended_modified.txt"
+    extended_path = f"{temp_path}/extended_modified_rfam.txt"
     if (apply_protein_coding_elimination):
         if (protein_coding_elimination_method.name == "diamond"):
             if (diamond_db_path is None):
