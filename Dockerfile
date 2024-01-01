@@ -1,5 +1,5 @@
 FROM ubuntu:22.04
-LABEL version="1.1.2"
+LABEL version="1.1.1"
 
 WORKDIR /amir-p3
 
