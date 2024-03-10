@@ -239,7 +239,7 @@ def preprocessing(df, mu=None, std=None, make_standard=True):
     X = X.join(encoder_df)
     # TNF
     _tnf = pd.DataFrame(df["hit seq"].apply(lambda x: tnf_calc(x)))
-    X = X.join(_tnf).reset_index(drop=True)
+    X = X.join(_tnf, how='inner').reset_index(drop=True)
     # start end nucleotide
     nuc_list = []
     for c in ["-3", "-2", "-1", "", "+1", "+2"]:
