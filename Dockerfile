@@ -51,7 +51,7 @@ RUN cd ./ViennaRNA-2.5.1 && ./configure && make && make install
 WORKDIR /amir-p3
 
 RUN pip3 install numpy==1.24.3
-RUN pip3 install pandas==1.3.3
+RUN pip3 install pandas==1.3.4
 RUN pip3 install tqdm==4.62.3
 RUN pip3 install urllib3==1.25.8
 RUN pip3 install sklearn==0.0
