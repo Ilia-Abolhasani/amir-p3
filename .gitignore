@@ -1,4 +1,5 @@
 venv
+jupyter_ipynbs/correlation_and_similarity/heat_map_corrolation_figs
 .idea
 .ipynb_checkpoints
 Trash/
